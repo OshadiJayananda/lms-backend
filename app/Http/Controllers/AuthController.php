@@ -85,8 +85,6 @@ class AuthController extends Controller
         // Include the user's roles
         $role = $user->getRoleNames()->first(); // Assuming a user has one role
 
-
-
             return response()->json([
                 'access_token' => $token,
                 'user' => $user,
