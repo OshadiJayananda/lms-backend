@@ -71,19 +71,19 @@ class AuthController extends Controller
 
             $credentials = ['email' => $request->email, 'password' => $request->password];
 
-            if(!auth()->attempt($credentials)){
-                return response()->json(['error' => 'invalid credentials'],403);
+            if (!auth()->attempt($credentials)) {
+                return response()->json(['error' => 'invalid credentials'], 403);
             }
 
-            $user = User::where('email',$request->email)->firstOrFail();
+            $user = User::where('email', $request->email)->firstOrFail();
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            if ($user->roles->isEmpty()) {
-                $user->assignRole('user');
-            }
+            // if ($user->roles->isEmpty()) {
+            //     $user->assignRole('user');
+            // }
 
-        // Include the user's roles
-        $role = $user->getRoleNames()->first(); // Assuming a user has one role
+            // Include the user's roles
+            $role = $user->getRoleNames()->first(); // Assuming a user has one role
 
             return response()->json([
                 'access_token' => $token,
@@ -117,5 +117,4 @@ class AuthController extends Controller
             ], 500);
         }
     }
-
 }
