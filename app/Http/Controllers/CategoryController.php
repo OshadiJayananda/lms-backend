@@ -15,8 +15,11 @@ class CategoryController extends Controller
     {
         try {
             $categories = Category::all();
+            $parentCategories = Category::whereNull('parent_id')->get();
+
             return response()->json([
                 'categories' => $categories,
+                'parent_categories' => $parentCategories,
             ], Response::HTTP_OK);
         } catch (Exception $e) {
             Log::error($e->getMessage());
@@ -99,17 +102,17 @@ class CategoryController extends Controller
         return response()->json(['message' => 'Category deleted successfully'], 200);
     }
 
-    public function getParentCategories()
-    {
-        try {
-            $parentCategories = Category::whereNull('parent_id')->get();
+    // public function getParentCategories()
+    // {
+    //     try {
+    //         $parentCategories = Category::whereNull('parent_id')->get();
 
-            return response()->json([
-                'parent_categories' => $parentCategories,
-            ], 200);
-        } catch (Exception $e) {
-            Log::error($e->getMessage());
-            return response()->json(['message' => $e->getMessage()], 400);
-        }
-    }
+    //         return response()->json([
+    //             'parent_categories' => $parentCategories,
+    //         ], 200);
+    //     } catch (Exception $e) {
+    //         Log::error($e->getMessage());
+    //         return response()->json(['message' => $e->getMessage()], 400);
+    //     }
+    // }
 }
