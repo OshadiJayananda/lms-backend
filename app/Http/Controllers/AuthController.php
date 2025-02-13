@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\LoginUserRequest;
+use App\Http\Requests\Auth\LoginUserRequest;
+use App\Http\Requests\Auth\RegisterUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Exception;
-use Illuminate\Support\Facades\Auth;
-
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
@@ -17,30 +16,19 @@ use Illuminate\Support\Facades\Validator;
 class AuthController extends Controller
 {
     // Register a new user
-    public function register(Request $request)
+    public function register(RegisterUserRequest $registerUserRequest)
     {
         try {
             // Validate request
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'email' => 'required|string|email|max:255|unique:users',
-                'address' => 'required|string|max:255',
-                'contact' => 'required|string|max:10',
-                'password' => 'required|string|min:6|confirmed',
-            ]);
-
-            // Check for validation errors
-            if ($validator->fails()) {
-                return response()->json(['errors' => $validator->errors()], 422);
-            }
+            $validatedUser = $registerUserRequest->validated();
 
             // Create a new user
             $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'address' => $request->address,
-                'contact' => $request->contact,
-                'password' => Hash::make($request->password),
+                'name' => $validatedUser['name'],
+                'email' => $validatedUser['email'],
+                'address' => $validatedUser['address'],
+                'contact' => $validatedUser['contact'],
+                'password' => Hash::make($validatedUser['password']),
             ]);
 
             if ($user->roles->isEmpty()) {
@@ -53,7 +41,7 @@ class AuthController extends Controller
             // Return success response
             return response()->json([
                 'access_token' => $token,
-                'user' => $user,
+                'user' => new UserResource($user),
             ], 201);
         } catch (Exception $e) {
             Log::error($e->getMessage());
