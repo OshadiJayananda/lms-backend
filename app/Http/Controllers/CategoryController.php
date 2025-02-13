@@ -3,11 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Http\Requests\CategoryRequest;
 use Exception;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 
 class CategoryController extends Controller
 {
@@ -27,66 +26,46 @@ class CategoryController extends Controller
         }
     }
 
-    public function store(Request $request)
+    public function store(CategoryRequest $request)
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'parent_id' => 'nullable|exists:categories,id',
-                'status' => 'required|boolean',
-            ]);
+            $category = Category::create($request->validated());
 
-            if ($validator->fails()) {
-                return response()->json($validator->errors(), 422);
-            }
-
-            $category = Category::create($validator->validated());
-
-            return response()->json(['message' => 'Category created successfully', 'category' => $category], 201);
+            return response()->json([
+                'message' => 'Category created successfully',
+                'category' => $category,
+            ], Response::HTTP_CREATED);
         } catch (Exception $e) {
             Log::error($e->getMessage());
-            return response()->json(['message' => $e->getMessage()], 400);
+            return response()->json(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
     }
-
 
     public function show($id)
     {
         $category = Category::with('parentCategory')->find($id);
 
         if (!$category) {
-            return response()->json(['message' => 'Category not found'], 404);
+            return response()->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
         }
 
-        return response()->json($category, 200);
+        return response()->json($category, Response::HTTP_OK);
     }
 
-    public function update(Request $request, $id)
+    public function update(CategoryRequest $request, $id)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'parent_id' => 'nullable|integer|exists:categories,id', // Allow null or valid category ID
-            'status' => 'required|boolean',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-
         $category = Category::find($id);
 
         if (!$category) {
-            return response()->json(['message' => 'Category not found'], 404);
+            return response()->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
         }
 
-        $category->update($request->all());
+        $category->update($request->validated());
 
         return response()->json([
             'message' => 'Category updated successfully',
             'category' => $category,
-        ], 200);
+        ], Response::HTTP_OK);
     }
 
     public function destroy($id)
@@ -94,25 +73,11 @@ class CategoryController extends Controller
         $category = Category::find($id);
 
         if (!$category) {
-            return response()->json(['message' => 'Category not found'], 404);
+            return response()->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
         }
 
         $category->delete();
 
-        return response()->json(['message' => 'Category deleted successfully'], 200);
+        return response()->json(['message' => 'Category deleted successfully'], Response::HTTP_OK);
     }
-
-    // public function getParentCategories()
-    // {
-    //     try {
-    //         $parentCategories = Category::whereNull('parent_id')->get();
-
-    //         return response()->json([
-    //             'parent_categories' => $parentCategories,
-    //         ], 200);
-    //     } catch (Exception $e) {
-    //         Log::error($e->getMessage());
-    //         return response()->json(['message' => $e->getMessage()], 400);
-    //     }
-    // }
 }
