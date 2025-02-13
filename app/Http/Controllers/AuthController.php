@@ -78,9 +78,9 @@ class AuthController extends Controller
             $user = User::where('email', $request->email)->firstOrFail();
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            // if ($user->roles->isEmpty()) {
-            //     $user->assignRole('user');
-            // }
+            if ($user->roles->isEmpty()) {
+                $user->assignRole('user');
+            }
 
             // Include the user's roles
             $role = $user->getRoleNames()->first(); // Assuming a user has one role
