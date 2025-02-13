@@ -2,9 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\LoginUserRequest;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Exception;
+use Illuminate\Support\Facades\Auth;
+
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -41,6 +46,7 @@ class AuthController extends Controller
             if ($user->roles->isEmpty()) {
                 $user->assignRole('user');
             }
+
             // Issue a Sanctum token
             $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -56,26 +62,20 @@ class AuthController extends Controller
     }
 
     //Login
-    public function login(Request $request)
+    public function login(LoginUserRequest $loginUserRequest)
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'email' => 'required|string|email',
-                'password' => 'required|string|min:6',
-            ]);
+            $validatedCredentials = $loginUserRequest->validated();
 
-            // Check for validation errors
-            if ($validator->fails()) {
-                return response()->json(['errors' => $validator->errors()], 422);
+            if (!auth()->attempt($validatedCredentials)) {
+                return response()->json(['error' => 'Invalid credentials'], Response::HTTP_UNAUTHORIZED);
             }
 
-            $credentials = ['email' => $request->email, 'password' => $request->password];
-
-            if (!auth()->attempt($credentials)) {
-                return response()->json(['error' => 'invalid credentials'], 403);
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['error' => 'Invalid credentials'], Response::HTTP_UNAUTHORIZED);
             }
 
-            $user = User::where('email', $request->email)->firstOrFail();
             $token = $user->createToken('auth_token')->plainTextToken;
 
             if ($user->roles->isEmpty()) {
@@ -83,16 +83,16 @@ class AuthController extends Controller
             }
 
             // Include the user's roles
-            $role = $user->getRoleNames()->first(); // Assuming a user has one role
+            $role = $user->getRoleNames()->first();
 
             return response()->json([
                 'access_token' => $token,
-                'user' => $user,
+                'user' => new UserResource($user),
                 'role' => $role,
-            ], 200);
+            ], Response::HTTP_OK);
         } catch (Exception $e) {
             Log::error($e->getMessage());
-            return response()->json(['message' => 'An unexpected error occurred.'], 500);
+            return response()->json(['message' => 'An unexpected error occurred.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
