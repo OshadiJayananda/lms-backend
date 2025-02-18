@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\BookRequest;
+use App\Http\Requests\UpdateBookRequest;
 use App\Models\Book;
 use Illuminate\Http\Request;
 
@@ -45,17 +46,25 @@ class BookController extends Controller
     /**
      * Update the specified book.
      */
-    public function update(BookRequest $request, Book $book)
+    public function update(UpdateBookRequest $request, Book $book)
     {
+        // Validate the request data
         $data = $request->validated();
 
         // Handle Image Upload
         if ($request->hasFile('image')) {
+            // Delete the old image if it exists
+            if ($book->image) {
+                Storage::delete('public/' . $book->image);
+            }
+            // Store the new image
             $data['image'] = $request->file('image')->store('book_images', 'public');
         }
 
+        // Update the book record
         $book->update($data);
 
+        // Return success response
         return response()->json(['message' => 'Book updated successfully!', 'book' => $book]);
     }
 
