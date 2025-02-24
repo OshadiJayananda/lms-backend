@@ -11,18 +11,16 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
     // Register a new user
-    public function register(RegisterUserRequest $registerUserRequest)
+    public function register(RegisterUserRequest $request)
     {
         try {
-            // Validate request
-            $validatedUser = $registerUserRequest->validated();
+            $validatedUser = $request->validated();
 
-            // Create a new user
             $user = User::create([
                 'name' => $validatedUser['name'],
                 'email' => $validatedUser['email'],
@@ -35,10 +33,8 @@ class AuthController extends Controller
                 $user->assignRole('user');
             }
 
-            // Issue a Sanctum token
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            // Return success response
             return response()->json([
                 'access_token' => $token,
                 'user' => new UserResource($user),
@@ -49,34 +45,28 @@ class AuthController extends Controller
         }
     }
 
-    //Login
-    public function login(LoginUserRequest $loginUserRequest)
+    // Login user
+    public function login(LoginUserRequest $request)
     {
         try {
-            $validatedCredentials = $loginUserRequest->validated();
+            $validatedCredentials = $request->validated();
 
-            if (!auth()->attempt($validatedCredentials)) {
+            if (!Auth::attempt(['email' => $validatedCredentials['email'], 'password' => $validatedCredentials['password']])) {
                 return response()->json(['error' => 'Invalid credentials'], Response::HTTP_UNAUTHORIZED);
             }
 
-            $user = auth()->user();
+            $user = Auth::user();
+
             if (!$user) {
                 return response()->json(['error' => 'Invalid credentials'], Response::HTTP_UNAUTHORIZED);
             }
-
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            if ($user->roles->isEmpty()) {
-                $user->assignRole('user');
-            }
-
-            // Include the user's roles
-            $role = $user->getRoleNames()->first();
 
             return response()->json([
                 'access_token' => $token,
                 'user' => new UserResource($user),
-                'role' => $role,
+                'role' => $user->getRoleNames()->first(),
             ], Response::HTTP_OK);
         } catch (Exception $e) {
             Log::error($e->getMessage());
@@ -84,20 +74,18 @@ class AuthController extends Controller
         }
     }
 
+    // Logout user
     public function logout(Request $request)
     {
         try {
-            // Check if the user has a valid token
             if ($request->user()->currentAccessToken()) {
-                // Revoke the current token
                 $request->user()->currentAccessToken()->delete();
             }
 
             return response()->json([
                 'message' => 'User has been logged out successfully',
             ], 200);
-        } catch (\Exception $e) {
-            // Log the exception for debugging
+        } catch (Exception $e) {
             Log::error('Logout Error: ' . $e->getMessage());
 
             return response()->json([

@@ -6,16 +6,26 @@ use App\Http\Controllers\CategoryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+// Public Routes
+// Route::get('/user', function (Request $request) {
+//     return $request->user();
+// })->middleware('auth:sanctum');
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
+// Admin-only routes
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::post('/admin-only-route', [BookController::class, 'adminFunction']);
+    Route::apiResource('categories', CategoryController::class);
 });
-// Route::get('/parent-categories', [CategoryController::class, 'getParentCategories']);
-Route::apiResource('categories', CategoryController::class);
-Route::apiResource('books', BookController::class);
+
+// Authenticated Routes
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/user', function () {
+        return response()->json(auth()->user());
+    });
+
+    Route::apiResource('books', BookController::class);
+});
