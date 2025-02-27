@@ -27,5 +27,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         return response()->json(auth()->user());
     });
 
+    Route::post('/user/profile-picture', [AuthController::class, 'updateProfilePicture']);
+    Route::post('/user/change-password', [AuthController::class, 'changePassword']);
+    Route::get('/user/profile-picture', [AuthController::class, 'getProfilePicture']);
     Route::apiResource('books', BookController::class);
 });

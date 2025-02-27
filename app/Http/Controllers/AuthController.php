@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Auth\LoginUserRequest;
 use App\Http\Requests\Auth\RegisterUserRequest;
+use App\Http\Requests\ChangePasswordRequest;
+use App\Http\Requests\UpdateProfilePictureRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Exception;
@@ -12,6 +14,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -92,5 +95,40 @@ class AuthController extends Controller
                 'message' => 'An error occurred while logging out.',
             ], 500);
         }
+    }
+
+
+    // Update Profile Picture
+    public function updateProfilePicture(UpdateProfilePictureRequest $request)
+    {
+        $user = Auth::user();
+
+        if ($request->hasFile('profile_picture')) {
+            $file = $request->file('profile_picture');
+            $path = $file->store('profile_pictures', 'public');
+
+            $user->profile_picture = Storage::url($path); // Return full URL
+            $user->save();
+
+            return response()->json(['profile_picture' => asset($user->profile_picture)], 200);
+        }
+
+        return response()->json(['error' => 'File upload failed'], 400);
+    }
+
+    public function getProfilePicture(Request $request)
+    {
+        $user = $request->user();
+        return response()->json(['profile_picture' => $user->profile_picture ? asset($user->profile_picture) : null]);
+    }
+
+    // Change Password
+    public function changePassword(ChangePasswordRequest $request)
+    {
+        $user = Auth::user();
+        $user->password = Hash::make($request->password); // Hash the new password
+        $user->save();
+
+        return response()->json(['message' => 'Password updated successfully'], 200);
     }
 }
