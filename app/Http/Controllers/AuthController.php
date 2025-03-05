@@ -104,10 +104,16 @@ class AuthController extends Controller
         $user = Auth::user();
 
         if ($request->hasFile('profile_picture')) {
+            // Delete old profile picture if exists
+            if ($user->profile_picture) {
+                $oldPath = str_replace(asset(''), '', $user->profile_picture);
+                Storage::disk('public')->delete($oldPath);
+            }
+
             $file = $request->file('profile_picture');
             $path = $file->store('profile_pictures', 'public');
 
-            $user->profile_picture = Storage::url($path); // Return full URL
+            $user->profile_picture = Storage::url($path); // Store full URL
             $user->save();
 
             return response()->json(['profile_picture' => asset($user->profile_picture)], 200);
@@ -116,11 +122,15 @@ class AuthController extends Controller
         return response()->json(['error' => 'File upload failed'], 400);
     }
 
+
     public function getProfilePicture(Request $request)
     {
         $user = $request->user();
-        return response()->json(['profile_picture' => $user->profile_picture ? asset($user->profile_picture) : null]);
+        return response()->json([
+            'profile_picture' => $user->profile_picture ? asset($user->profile_picture) : null
+        ]);
     }
+
 
     // Change Password
     public function changePassword(ChangePasswordRequest $request)
@@ -130,5 +140,19 @@ class AuthController extends Controller
         $user->save();
 
         return response()->json(['message' => 'Password updated successfully'], 200);
+    }
+
+    public function removeProfilePicture(Request $request)
+    {
+        $user = Auth::user();
+
+        if ($user->profile_picture) {
+            $oldPath = str_replace(asset(''), '', $user->profile_picture);
+            Storage::disk('public')->delete($oldPath);
+            $user->profile_picture = null;
+            $user->save();
+        }
+
+        return response()->json(['message' => 'Profile picture removed successfully'], 200);
     }
 }

@@ -23,20 +23,18 @@ class UpdateBookRequest extends FormRequest
         $bookId = $this->route('book'); // Get the book id from the route
 
         return [
-            'name' => 'sometimes|required|string|max:255',
-            'author' => 'sometimes|required|string|max:255',
+            'name' => 'nullable|string|max:255',
+            'author' => 'nullable|string|max:255',
             'isbn' => [
-                'sometimes',
-                'required',
+                'nullable',
                 'string',
                 'max:13',
-                // Ensure unique ISBN except for the current book being updated
                 'unique:books,isbn,' . $bookId,
             ],
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'description' => 'nullable|string',
-            'no_of_copies' => 'sometimes|required|integer|min:1',
-            'category_id' => 'sometimes|required|exists:categories,id',
+            'no_of_copies' => 'nullable|integer|min:1',
+            'category_id' => 'nullable|exists:categories,id',
         ];
     }
 
