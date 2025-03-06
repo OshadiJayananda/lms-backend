@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookController;
+use App\Http\Controllers\BorrowController;
 use App\Http\Controllers\CategoryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -15,7 +16,6 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/books/search', [BookController::class, 'search']);
 Route::get('/books/check-isbn', [BookController::class, 'checkIsbn']);
-
 
 // Admin-only routes
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
@@ -36,4 +36,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/user/remove-profile-picture', [AuthController::class, 'removeProfilePicture']);
 
     Route::apiResource('books', BookController::class);
+    Route::post('/books/{bookId}/request', [BorrowController::class, 'requestBook']);
+    Route::get('/borrowed-books', [BorrowController::class, 'getBorrowedBooks']);
 });
