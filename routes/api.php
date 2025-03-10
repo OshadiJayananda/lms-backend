@@ -21,6 +21,9 @@ Route::get('/books/check-isbn', [BookController::class, 'checkIsbn']);
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::post('/admin-only-route', [BookController::class, 'adminFunction']);
     Route::apiResource('categories', CategoryController::class);
+    Route::get('/admin/book-requests', [BorrowController::class, 'getPendingRequests']);
+    Route::post('/admin/book-requests/{borrowId}/approve', [BorrowController::class, 'approveRequest']);
+    Route::post('/admin/book-requests/{borrowId}/reject', [BorrowController::class, 'rejectRequest']);
 });
 
 // Authenticated Routes

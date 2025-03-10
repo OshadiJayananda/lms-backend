@@ -39,4 +39,33 @@ class BorrowController extends Controller
 
         return response()->json($borrowedBooks);
     }
+
+    public function getPendingRequests()
+    {
+        $pendingRequests = Borrow::with(['user', 'book'])->where('status', 'Pending')->get();
+        return response()->json($pendingRequests);
+    }
+
+    public function approveRequest($borrowId)
+    {
+        $borrow = Borrow::findOrFail($borrowId);
+        $borrow->status = 'Approved';
+        $borrow->save();
+
+        return response()->json(['message' => 'Request approved successfully!']);
+    }
+
+    public function rejectRequest($borrowId)
+    {
+        $borrow = Borrow::findOrFail($borrowId);
+        $borrow->status = 'Rejected';
+        $borrow->save();
+
+        // Optionally, increment the book copies if rejected
+        $book = Book::findOrFail($borrow->book_id);
+        $book->no_of_copies += 1;
+        $book->save();
+
+        return response()->json(['message' => 'Request rejected successfully!']);
+    }
 }
