@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\BookApprovalMail;
 use App\Models\Borrow;
 use App\Models\Book;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\BookApprovalNotification;
 
 class BorrowController extends Controller
 {
@@ -59,7 +59,7 @@ class BorrowController extends Controller
         $user = User::findOrFail($borrow->user_id);
         $book = Book::findOrFail($borrow->book_id);
 
-        Mail::to($user->email)->send(new BookApprovalNotification($book, $borrow));
+        Mail::to($user->email)->send(new BookApprovalMail($book, $borrow));
 
         return response()->json(['message' => 'Request approved successfully!']);
     }
