@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Borrow;
 use App\Models\Book;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\BookApprovalNotification;
 
 class BorrowController extends Controller
 {
@@ -52,6 +55,12 @@ class BorrowController extends Controller
         $borrow->status = 'Approved';
         $borrow->save();
 
+        // Send email to user
+        $user = User::findOrFail($borrow->user_id);
+        $book = Book::findOrFail($borrow->book_id);
+
+        Mail::to($user->email)->send(new BookApprovalNotification($book, $borrow));
+
         return response()->json(['message' => 'Request approved successfully!']);
     }
 
@@ -61,11 +70,24 @@ class BorrowController extends Controller
         $borrow->status = 'Rejected';
         $borrow->save();
 
-        // Optionally, increment the book copies if rejected
+        // Increment the book copies if rejected
         $book = Book::findOrFail($borrow->book_id);
         $book->no_of_copies += 1;
         $book->save();
 
         return response()->json(['message' => 'Request rejected successfully!']);
+    }
+
+    public function confirmBookGiven($borrowId)
+    {
+        $borrow = Borrow::findOrFail($borrowId);
+
+        // Update status and set due date to 2 weeks from now
+        $borrow->status = 'Issued';
+        $borrow->issued_date = now(); // Set the issued date to now
+        $borrow->due_date = now()->addWeeks(2); // Set due date to 2 weeks from now
+        $borrow->save();
+
+        return response()->json(['message' => 'Book issued successfully!']);
     }
 }
