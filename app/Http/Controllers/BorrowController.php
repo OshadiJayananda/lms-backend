@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\BookApprovalMail;
+use App\Mail\BookIssuedMail;
 use App\Models\Borrow;
 use App\Models\Book;
 use App\Models\User;
@@ -87,6 +88,12 @@ class BorrowController extends Controller
         $borrow->issued_date = now(); // Set the issued date to now
         $borrow->due_date = now()->addWeeks(2); // Set due date to 2 weeks from now
         $borrow->save();
+
+        // Send email to user
+        $user = User::findOrFail($borrow->user_id);
+        $book = Book::findOrFail($borrow->book_id);
+
+        Mail::to($user->email)->send(new BookIssuedMail($book, $borrow));
 
         return response()->json(['message' => 'Book issued successfully!']);
     }
