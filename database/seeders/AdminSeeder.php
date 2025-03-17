@@ -20,9 +20,9 @@ class AdminSeeder extends Seeder
             'email_verified_at' => now(),
             'password' => Hash::make('123456'),
 
-         ]);
+        ]);
 
-         $user = User::find(1); // Replace 1 with the user's ID
-         $user->assignRole('admin');
+        // $user = User::find(1); // Replace 1 with the user's ID
+        $user->assignRole('admin');
     }
 }
