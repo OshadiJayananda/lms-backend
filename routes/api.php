@@ -25,6 +25,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::post('/admin/book-requests/{borrowId}/approve', [BorrowController::class, 'approveRequest']);
     Route::post('/admin/book-requests/{borrowId}/reject', [BorrowController::class, 'rejectRequest']);
     Route::post('/admin/book-requests/{borrowId}/confirm', [BorrowController::class, 'confirmBookGiven']);
+    Route::get('/admin/returned-books', [BorrowController::class, 'getReturnedBooks']);
+    Route::post('/admin/returned-books/{borrowId}/confirm', [BorrowController::class, 'confirmReturn']);
 });
 
 // Authenticated Routes
@@ -42,4 +44,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('books', BookController::class);
     Route::post('/books/{bookId}/request', [BorrowController::class, 'requestBook']);
     Route::get('/borrowed-books', [BorrowController::class, 'getBorrowedBooks']);
+    Route::post('/borrowed-books/{bookId}/return', [BorrowController::class, 'returnBook']);
 });
