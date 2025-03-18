@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Mail;
 
 class BorrowController extends Controller
 {
-    public function requestBook(Request $request, $bookId)
+    public function requestBook($bookId)
     {
         $user = Auth::user();
         $book = Book::findOrFail($bookId);
@@ -98,7 +98,7 @@ class BorrowController extends Controller
         return response()->json(['message' => 'Book issued successfully!']);
     }
 
-    public function returnBook(Request $request, $bookId)
+    public function returnBook($bookId)
     {
         $borrow = Borrow::where('book_id', $bookId)
             ->where('user_id', auth()->id())
