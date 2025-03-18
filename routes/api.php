@@ -27,6 +27,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::post('/admin/book-requests/{borrowId}/confirm', [BorrowController::class, 'confirmBookGiven']);
     Route::get('/admin/returned-books', [BorrowController::class, 'getReturnedBooks']);
     Route::post('/admin/returned-books/{borrowId}/confirm', [BorrowController::class, 'confirmReturn']);
+    Route::get('/admin/borrowed-books', [BorrowController::class, 'getAllBorrowedBooks']);
 });
 
 // Authenticated Routes

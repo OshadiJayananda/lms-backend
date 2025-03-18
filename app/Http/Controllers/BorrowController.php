@@ -141,4 +141,24 @@ class BorrowController extends Controller
 
         return response()->json(['message' => 'Return confirmed successfully!']);
     }
+
+    public function getAllBorrowedBooks(Request $request)
+    {
+        $query = $request->query('q'); // Get the search query from the request
+
+        $borrowedBooks = Borrow::with(['user', 'book'])
+            ->when($query, function ($q) use ($query) {
+                $q->whereHas('book', function ($q) use ($query) {
+                    $q->where('name', 'like', "%{$query}%") // Search by book name
+                        ->orWhere('id', 'like', "%{$query}%"); // Search by book ID
+                })
+                    ->orWhereHas('user', function ($q) use ($query) {
+                        $q->where('id', 'like', "%{$query}%") // Search by user ID
+                            ->orWhere('name', 'like', "%{$query}%"); // Search by user name
+                    });
+            })
+            ->get();
+
+        return response()->json($borrowedBooks);
+    }
 }
