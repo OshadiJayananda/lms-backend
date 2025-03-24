@@ -46,4 +46,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/books/{bookId}/request', [BorrowController::class, 'requestBook']);
     Route::get('/borrowed-books', [BorrowController::class, 'getBorrowedBooks']);
     Route::post('/borrowed-books/{bookId}/return', [BorrowController::class, 'returnBook']);
+    Route::post('/borrowed-books/{bookId}/renew', [BorrowController::class, 'renewBook']);
 });

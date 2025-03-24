@@ -161,4 +161,21 @@ class BorrowController extends Controller
 
         return response()->json($borrowedBooks);
     }
+
+    public function renewBook(Request $request, $bookId)
+    {
+        $request->validate([
+            'renewDate' => 'required|date|after_or_equal:today|before_or_equal:today +30 days',
+        ]);
+
+        $borrow = Borrow::where('book_id', $bookId)
+            ->where('user_id', auth()->id())
+            ->where('status', 'Issued')
+            ->firstOrFail();
+
+        $borrow->due_date = $request->renewDate;
+        $borrow->save();
+
+        return response()->json(['message' => 'Book renewed successfully!']);
+    }
 }
