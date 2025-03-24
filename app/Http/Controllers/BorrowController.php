@@ -3,9 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Mail\BookApprovalMail;
+use App\Mail\BookAvailableNotification;
 use App\Mail\BookIssuedMail;
+use App\Mail\RenewalApprovedMail;
+use App\Mail\RenewalRejectedMail;
 use App\Models\Borrow;
 use App\Models\Book;
+use App\Models\BookAvailabilityNotification;
+use App\Models\RenewRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -177,5 +182,142 @@ class BorrowController extends Controller
         $borrow->save();
 
         return response()->json(['message' => 'Book renewed successfully!']);
+    }
+
+    public function checkBookAvailability($bookId)
+    {
+        $book = Book::findOrFail($bookId);
+        return response()->json([
+            'available' => $book->no_of_copies > 0,
+            'copies_available' => $book->no_of_copies
+        ]);
+    }
+
+    public function renewRequest(Request $request, $bookId)
+    {
+        $request->validate([
+            'renewDate' => 'required|date|after_or_equal:today'
+        ]);
+
+        $borrow = Borrow::where('book_id', $bookId)
+            ->where('user_id', auth()->id())
+            ->where('status', 'Issued')
+            ->firstOrFail();
+
+        $book = Book::findOrFail($bookId);
+
+        if ($book->no_of_copies <= 0) {
+            return response()->json([
+                'message' => 'No copies available for renewal'
+            ], 400);
+        }
+
+        // Create renew request
+        RenewRequest::create([
+            'borrow_id' => $borrow->id,
+            'user_id' => auth()->id(),
+            'book_id' => $bookId,
+            'current_due_date' => $borrow->due_date,
+            'requested_date' => $request->renewDate,
+            'status' => 'pending'
+        ]);
+
+        return response()->json(['message' => 'Renewal request submitted for admin approval']);
+    }
+
+    public function notifyAdmin(Request $request, $bookId)
+    {
+        $request->validate([
+            'requestedDate' => 'required|date'
+        ]);
+
+        $user = auth()->user();
+        $book = Book::findOrFail($bookId);
+
+        // Create notification
+        BookAvailabilityNotification::create([
+            'user_id' => $user->id,
+            'book_id' => $bookId,
+            'requested_date' => $request->requestedDate,
+            'notified' => false
+        ]);
+
+        return response()->json(['message' => 'Admin will be notified when copies become available']);
+    }
+
+    public function getRenewRequests()
+    {
+        $requests = RenewRequest::with(['user', 'book'])
+            ->where('status', 'pending')
+            ->get();
+
+        return response()->json($requests);
+    }
+
+    public function approveRenewRequest(Request $request, $requestId)
+    {
+        $request->validate([
+            'dueDate' => 'required|date'
+        ]);
+
+        $renewRequest = RenewRequest::findOrFail($requestId);
+        $borrow = Borrow::findOrFail($renewRequest->borrow_id);
+
+        // Update borrow record
+        $borrow->due_date = $request->dueDate;
+        $borrow->save();
+
+        // Update request status
+        $renewRequest->status = 'approved';
+        $renewRequest->save();
+
+        // Notify user
+        Mail::to($renewRequest->user->email)
+            ->send(new RenewalApprovedMail($renewRequest, $request->dueDate));
+
+        return response()->json(['message' => 'Renewal approved successfully']);
+    }
+
+    public function rejectRenewRequest($requestId)
+    {
+        $renewRequest = RenewRequest::findOrFail($requestId);
+        $renewRequest->status = 'rejected';
+        $renewRequest->save();
+
+        // Notify user
+        Mail::to($renewRequest->user->email)
+            ->send(new RenewalRejectedMail($renewRequest));
+
+        return response()->json(['message' => 'Renewal rejected']);
+    }
+
+    // Admin method to check for availability notifications
+    public function checkAvailabilityNotifications()
+    {
+        $notifications = BookAvailabilityNotification::with(['user', 'book'])
+            ->where('notified', false)
+            ->get();
+
+        return response()->json($notifications);
+    }
+
+    // Method to notify users when books become available
+    public function notifyAvailableBooks($bookId)
+    {
+        $book = Book::findOrFail($bookId);
+        $notifications = BookAvailabilityNotification::with('user')
+            ->where('book_id', $bookId)
+            ->where('notified', false)
+            ->get();
+
+        foreach ($notifications as $notification) {
+            Mail::to($notification->user->email)
+                ->send(new BookAvailableNotification($book, $notification->requested_date));
+
+            $notification->notified = true;
+            $notification->save();
+        }
+
+        return response()->json(['message' => 'Users notified about book availability']);
     }
 }

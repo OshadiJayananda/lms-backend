@@ -28,6 +28,13 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin/returned-books', [BorrowController::class, 'getReturnedBooks']);
     Route::post('/admin/returned-books/{borrowId}/confirm', [BorrowController::class, 'confirmReturn']);
     Route::get('/admin/borrowed-books', [BorrowController::class, 'getAllBorrowedBooks']);
+    Route::get('/admin/renew-requests', [BorrowController::class, 'getRenewRequests']);
+    Route::post('/admin/renew-requests/{requestId}/approve', [BorrowController::class, 'approveRenewRequest']);
+    Route::post('/admin/renew-requests/{requestId}/reject', [BorrowController::class, 'rejectRenewRequest']);
+
+    // Availability notifications
+    Route::get('/admin/availability-notifications', [BorrowController::class, 'checkAvailabilityNotifications']);
+    Route::post('/admin/notify-available/{bookId}', [BorrowController::class, 'notifyAvailableBooks']);
 });
 
 // Authenticated Routes
@@ -47,4 +54,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/borrowed-books', [BorrowController::class, 'getBorrowedBooks']);
     Route::post('/borrowed-books/{bookId}/return', [BorrowController::class, 'returnBook']);
     Route::post('/borrowed-books/{bookId}/renew', [BorrowController::class, 'renewBook']);
+
+    // Book availability check
+    Route::get('/books/{bookId}/availability', [BorrowController::class, 'checkBookAvailability']);
+
+    // Renewal requests
+    Route::post('/borrowed-books/{bookId}/renew-request', [BorrowController::class, 'renewRequest']);
+    Route::post('/borrowed-books/{bookId}/notify-admin', [BorrowController::class, 'notifyAdmin']);
 });
