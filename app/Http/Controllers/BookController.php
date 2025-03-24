@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\BookRequest;
 use App\Http\Requests\UpdateBookRequest;
 use App\Models\Book;
+use App\Models\BookReservation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -119,5 +120,93 @@ class BookController extends Controller
 
         // Return a JSON response indicating whether the ISBN exists
         return response()->json(['exists' => $exists]);
+    }
+
+    // Add to BookController.php
+    public function reserveBook(Request $request, $bookId)
+    {
+        try {
+            $request->validate([
+                'reservation_date' => 'required|date|after_or_equal:today'
+            ]);
+
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
+
+            $book = Book::find($bookId);
+            if (!$book) {
+                return response()->json(['message' => 'Book not found'], 404);
+            }
+
+            // Check for existing reservation
+            $existing = BookReservation::where('user_id', $user->id)
+                ->where('book_id', $bookId)
+                ->whereIn('status', ['pending', 'approved'])
+                ->exists();
+
+            if ($existing) {
+                return response()->json([
+                    'message' => 'You already have an active reservation for this book'
+                ], 400);
+            }
+
+            $reservation = BookReservation::create([
+                'user_id' => $user->id,
+                'book_id' => $bookId,
+                'reservation_date' => $request->reservation_date,
+                'expiry_date' => now()->addDays(7),
+                'status' => 'pending'
+            ]);
+
+            return response()->json([
+                'message' => 'Reservation submitted successfully',
+                'reservation' => $reservation
+            ], 201);
+        } catch (\Exception $e) {
+            \Log::error('Reservation error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Server error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getReservations()
+    {
+        $reservations = BookReservation::with(['user', 'book'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($reservations);
+    }
+
+    public function approveReservation($reservationId)
+    {
+        $reservation = BookReservation::findOrFail($reservationId);
+
+        // Check if book is available
+        if ($reservation->book->no_of_copies <= 0) {
+            return response()->json([
+                'message' => 'Cannot approve reservation - no copies available'
+            ], 400);
+        }
+
+        $reservation->status = 'approved';
+        $reservation->save();
+
+        // Optionally reduce book copies if needed
+        // $reservation->book->decrement('no_of_copies');
+
+        return response()->json(['message' => 'Reservation approved successfully']);
+    }
+
+    public function rejectReservation($reservationId)
+    {
+        $reservation = BookReservation::findOrFail($reservationId);
+        $reservation->status = 'rejected';
+        $reservation->save();
+
+        return response()->json(['message' => 'Reservation rejected']);
     }
 }

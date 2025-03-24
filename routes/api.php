@@ -35,6 +35,9 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     // Availability notifications
     Route::get('/admin/availability-notifications', [BorrowController::class, 'checkAvailabilityNotifications']);
     Route::post('/admin/notify-available/{bookId}', [BorrowController::class, 'notifyAvailableBooks']);
+    Route::get('/admin/book-reservations', [BookController::class, 'getReservations']);
+    Route::post('/admin/book-reservations/{reservationId}/approve', [BookController::class, 'approveReservation']);
+    Route::post('/admin/book-reservations/{reservationId}/reject', [BookController::class, 'rejectReservation']);
 });
 
 // Authenticated Routes
@@ -61,4 +64,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Renewal requests
     Route::post('/borrowed-books/{bookId}/renew-request', [BorrowController::class, 'renewRequest']);
     Route::post('/borrowed-books/{bookId}/notify-admin', [BorrowController::class, 'notifyAdmin']);
+    Route::post('/books/{bookId}/reserve', [BookController::class, 'reserveBook']);
 });
