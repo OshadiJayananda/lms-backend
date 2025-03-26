@@ -229,6 +229,9 @@ class BookController extends Controller
             'is_read' => false
         ]);
 
+        // Delete the reservation
+        $reservation->delete();
+
         return response()->json(['message' => 'Book confirmed as given to user']);
     }
 
