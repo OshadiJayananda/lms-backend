@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\BorrowController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +39,10 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin/book-reservations', [BookController::class, 'getReservations']);
     Route::post('/admin/book-reservations/{reservationId}/approve', [BookController::class, 'approveReservation']);
     Route::post('/admin/book-reservations/{reservationId}/reject', [BookController::class, 'rejectReservation']);
+    // Route::get('/admin/notifications', [NotificationController::class, 'getNotifications']);
+    Route::post('/admin/book-reservations/{reservationId}/confirm-given', [BookController::class, 'confirmBookGiven']);
+    Route::get('/admin/notifications', [NotificationController::class, 'index']);
+    Route::post('/admin/book-reservations/{reservation}/create-borrow', [BookController::class, 'createBorrowFromReservation']);
 });
 
 // Authenticated Routes
@@ -65,4 +70,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/borrowed-books/{bookId}/renew-request', [BorrowController::class, 'renewRequest']);
     Route::post('/borrowed-books/{bookId}/notify-admin', [BorrowController::class, 'notifyAdmin']);
     Route::post('/books/{bookId}/reserve', [BookController::class, 'reserveBook']);
+    Route::post('/reservations/{reservation}/respond', [BorrowController::class, 'handleReservationResponse']);
+
+    Route::post('/notifications/create', [NotificationController::class, 'create']);
+    Route::post('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::post('/reservations/{reservationId}/respond', [BorrowController::class, 'respondToReservation']);
+    Route::get('/user/notifications', [NotificationController::class, 'userNotifications']);
 });

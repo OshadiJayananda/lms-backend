@@ -10,6 +10,8 @@ use App\Mail\RenewalRejectedMail;
 use App\Models\Borrow;
 use App\Models\Book;
 use App\Models\BookAvailabilityNotification;
+use App\Models\BookReservation;
+use App\Models\Notification;
 use App\Models\RenewRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -128,24 +130,24 @@ class BorrowController extends Controller
         return response()->json($returnedBooks);
     }
 
-    public function confirmReturn($borrowId)
-    {
-        $borrow = Borrow::findOrFail($borrowId);
+    // public function confirmReturn($borrowId)
+    // {
+    //     $borrow = Borrow::findOrFail($borrowId);
 
-        if ($borrow->status !== 'Returned') {
-            return response()->json(['message' => 'This book has not been returned.'], 400);
-        }
+    //     if ($borrow->status !== 'Returned') {
+    //         return response()->json(['message' => 'This book has not been returned.'], 400);
+    //     }
 
-        $borrow->status = 'Confirmed';
-        $borrow->save();
+    //     $borrow->status = 'Confirmed';
+    //     $borrow->save();
 
-        // Increment the book copies
-        $book = Book::findOrFail($borrow->book_id);
-        $book->no_of_copies += 1;
-        $book->save();
+    //     // Increment the book copies
+    //     $book = Book::findOrFail($borrow->book_id);
+    //     $book->no_of_copies += 1;
+    //     $book->save();
 
-        return response()->json(['message' => 'Return confirmed successfully!']);
-    }
+    //     return response()->json(['message' => 'Return confirmed successfully!']);
+    // }
 
     public function getAllBorrowedBooks(Request $request)
     {
@@ -319,5 +321,174 @@ class BorrowController extends Controller
         }
 
         return response()->json(['message' => 'Users notified about book availability']);
+    }
+
+    public function confirmReturn($borrowId)
+    {
+        $borrow = Borrow::findOrFail($borrowId);
+
+        if ($borrow->status !== 'Returned') {
+            return response()->json(['message' => 'This book has not been returned.'], 400);
+        }
+
+        $borrow->status = 'Confirmed';
+        $borrow->save();
+
+        // Increment the book copies
+        $book = Book::findOrFail($borrow->book_id);
+        $book->no_of_copies += 1;
+        $book->save();
+
+        // Check if there are pending reservations for this book
+        $pendingReservations = BookReservation::with('user')
+            ->where('book_id', $book->id)
+            ->where('status', 'pending')
+            ->get();
+
+        if ($pendingReservations->count() > 0) {
+            foreach ($pendingReservations as $reservation) {
+                // Create notification for admin
+                Notification::create([
+                    'user_id' => $reservation->user_id,
+                    'book_id' => $book->id,
+                    'reservation_id' => $reservation->id,
+                    'title' => "Book Now Available: {$book->name}",
+                    'message' => "The book '{$book->name}' is now available. You have a pending reservation for this book.",
+                    'type' => 'book_available',
+                    'is_read' => false
+                ]);
+
+                // Create notification for admin
+                Notification::create([
+                    'user_id' => 1, // Assuming admin has ID 1
+                    'book_id' => $book->id,
+                    'reservation_id' => $reservation->id,
+                    'title' => "Book Available with Pending Reservation",
+                    'message' => "Book '{$book->name}' is now available with {$pendingReservations->count()} pending reservation(s).",
+                    'type' => 'admin_alert',
+                    'is_read' => false
+                ]);
+            }
+        }
+
+        return response()->json(['message' => 'Return confirmed successfully!']);
+    }
+
+    public function respondToReservation(Request $request, $reservationId)
+    {
+        $request->validate([
+            'confirm' => 'required|boolean'
+        ]);
+
+        $reservation = BookReservation::findOrFail($reservationId);
+        $book = Book::findOrFail($reservation->book_id);
+
+        if ($request->confirm) {
+            // User confirms they want the book
+            if ($book->no_of_copies > 0) {
+                // Create borrow record
+                $borrow = Borrow::create([
+                    'user_id' => $reservation->user_id,
+                    'book_id' => $reservation->book_id,
+                    'issued_date' => now(),
+                    'due_date' => now()->addWeeks(2),
+                    'status' => 'Issued'
+                ]);
+
+                // Reduce book copies
+                $book->decrement('no_of_copies');
+
+                // Notify admin
+                Notification::create([
+                    'user_id' => 1, // Admin ID
+                    'book_id' => $book->id,
+                    'reservation_id' => $reservation->id,
+                    'title' => 'Reservation Confirmed',
+                    'message' => "User has confirmed reservation for {$book->name}",
+                    'type' => 'reservation_confirmed',
+                    'is_read' => false
+                ]);
+
+                // Delete reservation
+                $reservation->delete();
+
+                return response()->json(['message' => 'Book issued successfully']);
+            } else {
+                return response()->json(['message' => 'No copies available'], 400);
+            }
+        } else {
+            // User declines the reservation
+            Notification::create([
+                'user_id' => 1, // Admin ID
+                'book_id' => $book->id,
+                'reservation_id' => $reservation->id,
+                'title' => 'Reservation Declined',
+                'message' => "User has declined reservation for {$book->name}",
+                'type' => 'reservation_declined',
+                'is_read' => false
+            ]);
+
+            // Delete reservation
+            $reservation->delete();
+
+            return response()->json(['message' => 'Reservation cancelled']);
+        }
+    }
+    public function handleReservationResponse(Request $request, $reservationId)
+    {
+        $request->validate([
+            'confirm' => 'required|boolean'
+        ]);
+
+        $reservation = BookReservation::findOrFail($reservationId);
+        $book = $reservation->book;
+        $user = $reservation->user;
+
+        if ($request->confirm) {
+            // User confirms they want the book
+            Notification::create([
+                'user_id' => 1, // Admin ID
+                'book_id' => $book->id,
+                'reservation_id' => $reservation->id,
+                'title' => 'Reservation Confirmed',
+                'message' => "User {$user->name} has confirmed reservation for {$book->name}",
+                'type' => 'reservation_confirmed', // Matches enum
+                'is_read' => false
+            ]);
+
+            return response()->json(['message' => 'Admin has been notified']);
+        } else {
+            // User declines the reservation
+            Notification::create([
+                'user_id' => 1, // Admin ID
+                'book_id' => $book->id,
+                'reservation_id' => $reservation->id,
+                'title' => 'Reservation Declined',
+                'message' => "User {$user->name} has declined reservation for {$book->name}",
+                'type' => 'reservation_rejected', // Changed to match enum
+                'is_read' => false
+            ]);
+
+            // Delete reservation
+            $reservation->delete();
+
+            // Check if there are other pending reservations
+            $pendingReservations = BookReservation::where('book_id', $book->id)
+                ->where('status', 'pending')
+                ->exists();
+
+            if ($pendingReservations) {
+                Notification::create([
+                    'user_id' => 1, // Admin ID
+                    'book_id' => $book->id,
+                    'title' => 'Pending Reservations',
+                    'message' => "There are pending reservations for {$book->name}",
+                    'type' => 'admin_alert',
+                    'is_read' => false
+                ]);
+            }
+
+            return response()->json(['message' => 'Reservation cancelled']);
+        }
     }
 }
