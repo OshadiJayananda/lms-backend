@@ -16,6 +16,8 @@ use App\Models\RenewRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class BorrowController extends Controller
@@ -230,36 +232,66 @@ class BorrowController extends Controller
 
     public function getRenewRequests()
     {
-        $requests = RenewRequest::with(['user', 'book'])
-            ->where('status', 'pending')
-            ->get();
+        try {
+            $requests = RenewRequest::with([
+                'user',
+                'book',
+                'book.reservations' => function ($query) {
+                    $query->where('status', 'pending');
+                }
+            ])
+                ->where('status', 'pending')
+                ->get();
 
-        return response()->json($requests);
+            return response()->json($requests);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch renew requests: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to fetch renewal requests',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function approveRenewRequest(Request $request, $requestId)
     {
-        $request->validate([
-            'dueDate' => 'required|date'
-        ]);
+        DB::beginTransaction();
+        try {
+            $validated = $request->validate([
+                'dueDate' => 'required|date|after_or_equal:today'
+            ]);
 
-        $renewRequest = RenewRequest::findOrFail($requestId);
-        $borrow = Borrow::findOrFail($renewRequest->borrow_id);
+            $renewRequest = RenewRequest::with('borrow')->findOrFail($requestId);
 
-        // Update borrow record
-        $borrow->due_date = $request->dueDate;
-        $borrow->save();
+            if (!$renewRequest->borrow) {
+                throw new \Exception('Associated borrow record not found');
+            }
 
-        // Update request status
-        $renewRequest->status = 'approved';
-        $renewRequest->save();
+            // Format the date for MySQL
+            $dueDate = \Carbon\Carbon::parse($validated['dueDate'])->format('Y-m-d H:i:s');
 
-        // Notify user
-        Mail::to($renewRequest->user->email)
-            ->send(new RenewalApprovedMail($renewRequest, $request->dueDate));
+            $renewRequest->borrow->update([
+                'due_date' => $dueDate
+            ]);
 
-        return response()->json(['message' => 'Renewal approved successfully']);
+            $renewRequest->update([
+                'status' => 'approved',
+                'processed_at' => now()
+            ]);
+
+            DB::commit();
+
+            return response()->json(['message' => 'Renewal approved successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Renewal approval failed: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to approve renewal',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
+
 
     public function rejectRenewRequest($requestId)
     {
@@ -471,5 +503,50 @@ class BorrowController extends Controller
 
             return response()->json(['message' => 'Reservation cancelled']);
         }
+    }
+
+    public function confirmRenewalDate(Request $request, $requestId)
+    {
+        $request->validate([
+            'confirm' => 'required|boolean'
+        ]);
+
+        $renewRequest = RenewRequest::findOrFail($requestId);
+        $borrow = Borrow::findOrFail($renewRequest->borrow_id);
+
+        if ($request->confirm) {
+            // User accepted the date change
+            $borrow->due_date = $renewRequest->admin_proposed_date;
+            $borrow->save();
+
+            $renewRequest->status = 'approved';
+            $renewRequest->save();
+
+            // Notify admin
+            Notification::create([
+                'user_id' => 1, // Admin ID
+                'book_id' => $renewRequest->book_id,
+                'title' => 'Renewal Confirmed',
+                'message' => "User has confirmed the renewal date change for {$renewRequest->book->name}",
+                'type' => 'renewal_confirmed',
+                'is_read' => false
+            ]);
+        } else {
+            // User rejected the date change
+            $renewRequest->status = 'rejected';
+            $renewRequest->save();
+
+            // Notify admin
+            Notification::create([
+                'user_id' => 1, // Admin ID
+                'book_id' => $renewRequest->book_id,
+                'title' => 'Renewal Declined',
+                'message' => "User has declined the renewal date change for {$renewRequest->book->name}",
+                'type' => 'renewal_declined',
+                'is_read' => false
+            ]);
+        }
+
+        return response()->json(['message' => 'Renewal confirmation processed']);
     }
 }

@@ -28,4 +28,9 @@ class Book extends Model
     {
         return $value ? asset('storage/' . $value) : null;
     }
+
+    public function reservations()
+    {
+        return $this->hasMany(BookReservation::class);
+    }
 }

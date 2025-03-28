@@ -43,6 +43,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::post('/admin/book-reservations/{reservationId}/confirm-given', [BookController::class, 'confirmBookGiven']);
     Route::get('/admin/notifications', [NotificationController::class, 'index']);
     Route::post('/admin/book-reservations/{reservation}/create-borrow', [BookController::class, 'createBorrowFromReservation']);
+    Route::post('/admin/renew-requests/{requestId}/confirm', [BorrowController::class, 'confirmRenewalDate']);
 });
 
 // Authenticated Routes
@@ -77,4 +78,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::post('/reservations/{reservationId}/respond', [BorrowController::class, 'respondToReservation']);
     Route::get('/user/notifications', [NotificationController::class, 'userNotifications']);
+    Route::post('/renew-requests/{requestId}/confirm', [BorrowController::class, 'confirmRenewalDate']);
 });
