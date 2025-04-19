@@ -20,7 +20,7 @@ class UpdateBookRequest extends FormRequest
      */
     public function rules(): array
     {
-        $bookId = $this->route('book'); // Get the book id from the route
+        $bookId = $this->route('book')?->id; // Get the book id from the route
 
         return [
             'name' => 'nullable|string|max:255',

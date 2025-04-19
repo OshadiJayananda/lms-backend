@@ -64,9 +64,6 @@ class BookController extends Controller
             }
             // Store the new image and get the relative path
             $data['image'] = $request->file('image')->store('book_images', 'public');
-        } else {
-            // If no new image is uploaded, retain the existing image
-            $data['image'] = $book->image;
         }
 
         // Log the updated data
