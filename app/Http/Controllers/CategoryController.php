@@ -13,13 +13,12 @@ class CategoryController extends Controller
     public function index()
     {
         try {
-            $categories = Category::all();
-            $parentCategories = Category::whereNull('parent_id')->get();
+            // Get all parent categories with their children
+            $categories = Category::with('childCategories')
+                ->whereNull('parent_id')
+                ->get();
 
-            return response()->json([
-                'categories' => $categories,
-                'parent_categories' => $parentCategories,
-            ], Response::HTTP_OK);
+            return response()->json($categories, Response::HTTP_OK);
         } catch (Exception $e) {
             Log::error($e->getMessage());
             return response()->json(['message' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -30,10 +29,9 @@ class CategoryController extends Controller
     {
         try {
             $category = Category::create($request->validated());
-
             return response()->json([
                 'message' => 'Category created successfully',
-                'category' => $category,
+                'category' => $category->load('parentCategory'),
             ], Response::HTTP_CREATED);
         } catch (Exception $e) {
             Log::error($e->getMessage());
@@ -41,43 +39,28 @@ class CategoryController extends Controller
         }
     }
 
-    public function show($id)
+    public function show(Category $category)
     {
-        $category = Category::with('parentCategory')->find($id);
-
-        if (!$category) {
-            return response()->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
-        }
-
-        return response()->json($category, Response::HTTP_OK);
+        return response()->json(
+            $category->load('parentCategory', 'childCategories'),
+            Response::HTTP_OK
+        );
     }
 
-    public function update(CategoryRequest $request, $id)
+    public function update(CategoryRequest $request, Category $category)
     {
-        $category = Category::find($id);
-
-        if (!$category) {
-            return response()->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
-        }
-
         $category->update($request->validated());
-
         return response()->json([
             'message' => 'Category updated successfully',
-            'category' => $category,
+            'category' => $category->fresh(['parentCategory', 'childCategories']),
         ], Response::HTTP_OK);
     }
 
-    public function destroy($id)
+    public function destroy(Category $category)
     {
-        $category = Category::find($id);
-
-        if (!$category) {
-            return response()->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
-        }
-
         $category->delete();
-
-        return response()->json(['message' => 'Category deleted successfully'], Response::HTTP_OK);
+        return response()->json([
+            'message' => 'Category deleted successfully'
+        ], Response::HTTP_OK);
     }
 }
