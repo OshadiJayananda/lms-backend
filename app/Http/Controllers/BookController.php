@@ -14,13 +14,30 @@ use Illuminate\Support\Facades\Storage;
 
 class BookController extends Controller
 {
+
+
     /**
      * Display a listing of books.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $books = Book::all();
-        return response()->json($books, 200);
+        $query = $request->query('q');
+
+        // If no query is provided, return all books
+        if (!$query) {
+            return response()->json(Book::paginate(2));
+        }
+
+        // Perform the search
+        $books = Book::where('name', 'like', "%$query%")
+            ->orWhere('author', 'like', "%$query%")
+            ->orWhere('isbn', 'like', "%$query%")
+            ->get();
+
+        return response()->json($books);
+
+        // $books = Book::all();
+        // return response()->json($books, 200);
     }
 
     /**
