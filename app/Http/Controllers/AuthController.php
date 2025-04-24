@@ -36,9 +36,12 @@ class AuthController extends Controller
                 $user->assignRole('user');
             }
 
+            $token = $user->createToken('auth_token')->plainTextToken;
 
             return response()->json([
+                'access_token' => $token,
                 'user' => new UserResource($user),
+                'role' => $user->getRoleNames()->first(),
             ], 201);
         } catch (Exception $e) {
             Log::error($e->getMessage());

@@ -58,8 +58,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user/get-profile-picture', [AuthController::class, 'getProfilePicture']);
     Route::post('/user/remove-profile-picture', [AuthController::class, 'removeProfilePicture']);
 
-    Route::apiResource('books', BookController::class)->except(['update']);
-    Route::post('books/{book}/update', [BookController::class, 'update']);
+    Route::apiResource('books', BookController::class);
     Route::post('/books/{bookId}/request', [BorrowController::class, 'requestBook']);
     Route::get('/borrowed-books', [BorrowController::class, 'getBorrowedBooks']);
     Route::post('/borrowed-books/{bookId}/return', [BorrowController::class, 'returnBook']);
