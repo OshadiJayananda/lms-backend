@@ -50,7 +50,12 @@ class ProfileController extends Controller
     public function changePassword(ChangePasswordRequest $request)
     {
         $user = Auth::user();
-        $user->password = Hash::make($request->password); // Hash the new password
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json(['message' => 'Current password is incorrect'], 422);
+        }
+
+        $user->password = Hash::make($request->password);
         $user->save();
 
         return response()->json(['message' => 'Password updated successfully'], 200);
