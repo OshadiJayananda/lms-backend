@@ -25,7 +25,7 @@ class BookController extends Controller
 
         // If no query is provided, return all books
         if (!$query) {
-            return response()->json(Book::paginate(2));
+            return response()->json(Book::all());
         }
 
         // Perform the search

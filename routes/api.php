@@ -5,6 +5,7 @@ use App\Http\Controllers\BookController;
 use App\Http\Controllers\BorrowController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -21,7 +22,10 @@ Route::get('/books/check-isbn', [BookController::class, 'checkIsbn']);
 // Admin-only routes
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::post('/admin-only-route', [BookController::class, 'adminFunction']);
-    Route::apiResource('categories', CategoryController::class);
+    // Route::apiResource('categories', CategoryController::class);
+    Route::post('/categories', [CategoryController::class, 'store']);
+    Route::put('/categories/{category}', [CategoryController::class, 'update']);
+    Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
     Route::get('/admin/book-requests', [BorrowController::class, 'getPendingRequests']);
     Route::post('/admin/book-requests/{borrowId}/approve', [BorrowController::class, 'approveRequest']);
     Route::post('/admin/book-requests/{borrowId}/reject', [BorrowController::class, 'rejectRequest']);
@@ -48,15 +52,21 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 
 // Authenticated Routes
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/categories/{category}', [CategoryController::class, 'show']);
+
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', function () {
         return response()->json(auth()->user());
     });
 
-    Route::post('/user/profile-picture', [AuthController::class, 'updateProfilePicture']);
-    Route::post('/user/change-password', [AuthController::class, 'changePassword']);
-    Route::get('/user/get-profile-picture', [AuthController::class, 'getProfilePicture']);
-    Route::post('/user/remove-profile-picture', [AuthController::class, 'removeProfilePicture']);
+    // Route::post('/user/profile-picture', [ProfileController::class, 'updateProfilePicture']);
+    // Route::post('/user/change-password', [ProfileController::class, 'changePassword']);
+    // Route::get('/user/get-profile-picture', [ProfileController::class, 'getProfilePicture']);
+    // Route::post('/user/remove-profile-picture', [ProfileController::class, 'removeProfilePicture']);
+
+    Route::apiResource('profile', ProfileController::class);
+    Route::post('/user/change-password', [ProfileController::class, 'changePassword']);
 
     Route::apiResource('books', BookController::class);
     Route::post('/books/{bookId}/request', [BorrowController::class, 'requestBook']);

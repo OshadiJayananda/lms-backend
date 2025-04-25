@@ -13,7 +13,7 @@ class ProfileController extends Controller
 {
 
     // Update Profile Picture
-    public function updateProfilePicture(UpdateProfilePictureRequest $request)
+    public function store(UpdateProfilePictureRequest $request)
     {
         $user = Auth::user();
 
@@ -37,7 +37,7 @@ class ProfileController extends Controller
     }
 
 
-    public function getProfilePicture(Request $request)
+    public function index(Request $request)
     {
         $user = $request->user();
         return response()->json([
@@ -56,7 +56,7 @@ class ProfileController extends Controller
         return response()->json(['message' => 'Password updated successfully'], 200);
     }
 
-    public function removeProfilePicture(Request $request)
+    public function destroy(Request $request)
     {
         $user = Auth::user();
 
