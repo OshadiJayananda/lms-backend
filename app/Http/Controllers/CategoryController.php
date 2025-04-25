@@ -5,20 +5,24 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Http\Requests\CategoryRequest;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 
 class CategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         try {
-            // Get all parent categories with their children
-            $categories = Category::with('childCategories')
-                ->whereNull('parent_id')
-                ->get();
+            $query = Category::with('parentCategory')
+                ->orderByRaw('CASE WHEN parent_id IS NULL THEN 0 ELSE 1 END')
+                ->orderBy('name');
 
-            return response()->json($categories, Response::HTTP_OK);
+            if ($request->get('parents_only')) {
+                $query->whereNull('parent_id');
+            }
+
+            return response()->json($query->paginate(5), Response::HTTP_OK);
         } catch (Exception $e) {
             Log::error($e->getMessage());
             return response()->json(['message' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
