@@ -3,10 +3,11 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class BookAvailableNotification extends Mailable
+class BookAvailableNotification extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

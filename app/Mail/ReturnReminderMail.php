@@ -9,7 +9,7 @@ use Illuminate\Queue\SerializesModels;
 use App\Models\Book;
 use App\Models\Borrow;
 
-class ReturnReminderMail extends Mailable
+class ReturnReminderMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
