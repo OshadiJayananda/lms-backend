@@ -178,6 +178,7 @@ class BorrowController extends Controller
         ]);
     }
 
+    // In BorrowController.php
     public function renewRequest(Request $request, $bookId)
     {
         $request->validate([
