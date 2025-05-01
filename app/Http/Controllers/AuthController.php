@@ -14,6 +14,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
@@ -82,8 +83,17 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         try {
-            if ($request->user()->currentAccessToken()) {
-                $request->user()->currentAccessToken()->delete();
+            if ($user = $request->user()) {
+                Cache::forget("user_token_{$user->id}");
+                $currentToken = $user->currentAccessToken();
+
+                if ($currentToken) {
+                    // ❗ Option 1: Logout from **all devices/sessions**
+                    // $user->tokens()->delete();
+
+                    // ✅ Option 2: Logout from **current session only**
+                    $currentToken->delete();
+                }
             }
 
             return response()->json([
@@ -95,6 +105,30 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'An error occurred while logging out.',
             ], 500);
+        }
+    }
+
+    public function validateToken(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            if (!$user) {
+                return response()->json(['message' => 'Token is invalid'], 401);
+            }
+
+            // Cache the response for 5 minutes to reduce DB checks
+            $data = Cache::remember("user_token_{$user->id}", now()->addMinutes(5), function () use ($user) {
+                return [
+                    'message' => 'Token is valid',
+                    'user' => new UserResource($user),
+                ];
+            });
+
+            return response()->json($data);
+        } catch (Exception $e) {
+            Log::error('Token Validation Error: ' . $e->getMessage());
+            return response()->json(['message' => 'An error occurred while validating the token.'], 500);
         }
     }
 }

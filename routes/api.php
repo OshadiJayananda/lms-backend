@@ -59,6 +59,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 
 // Authenticated Routes
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/validate-token', [AuthController::class, 'validateToken']);
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{category}', [CategoryController::class, 'show']);
 
