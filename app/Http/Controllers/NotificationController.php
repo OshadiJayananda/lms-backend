@@ -44,8 +44,11 @@ class NotificationController extends Controller
     {
         try {
             // Get notifications for the authenticated admin user
-            $notifications = Notification::where('user_id', auth()->id())
-                ->orWhere('type', 'admin_alert')
+            $notifications = Notification::where(function ($query) {
+                $query->where('user_id', auth()->id())
+                    ->orWhere('type', 'admin_alert');
+            })
+                ->where('is_read', false)
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -153,14 +156,35 @@ class NotificationController extends Controller
                 'processed_at' => now()
             ]);
 
-            // ... rest of your notification handling code ...
+            Notification::create([
+                'user_id' => $renewRequest->user_id,
+                'book_id' => $renewRequest->book_id,
+                'renew_request_id' => $renewRequest->id,
+                'title' => $validated['confirm'] ? 'Renewal Approved' : 'Renewal Rejected',
+                'message' => $validated['confirm']
+                    ? "Your renewal request for '{$renewRequest->book->name}' was approved. New due date: {$newDueDate}."
+                    : "Your renewal request for '{$renewRequest->book->name}' was rejected.",
+                'type' => $validated['confirm']
+                    ? Notification::TYPE_RENEWAL_CONFIRMED
+                    : Notification::TYPE_RENEWAL_DECLINED,
+                'is_read' => false
+            ]);
+
+            $notification->update([
+                'is_read' => true,
+                'read_at' => now(),
+                'metadata' => [
+                    'renew_request_id' => $renewRequest->id,
+                    'new_due_date' => $newDueDate
+                ]
+            ]);
 
             DB::commit();
 
             return response()->json([
                 'message' => $validated['confirm']
-                    ? 'Renewal confirmed successfully'
-                    : 'Renewal declined'
+                    ? 'Renewal confirmed and user notified.'
+                    : 'Renewal declined and user notified.'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
