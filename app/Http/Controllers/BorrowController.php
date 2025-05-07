@@ -192,6 +192,15 @@ class BorrowController extends Controller
             ->where('status', 'Issued')
             ->firstOrFail();
 
+        $existingRequest = RenewRequest::where('borrow_id', $borrow->id)
+            ->where('user_id', auth()->id())
+            ->where('status', 'pending')
+            ->first();
+
+        if ($existingRequest) {
+            return response()->json(['message' => 'A renewal request is already pending for this book. Please wait for approval.'], 422);
+        }
+
         $renewRequest = RenewRequest::create([
             'borrow_id' => $borrow->id,
             'user_id' => auth()->id(),
