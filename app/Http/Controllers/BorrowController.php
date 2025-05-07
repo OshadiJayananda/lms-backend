@@ -48,7 +48,10 @@ class BorrowController extends Controller
     public function getBorrowedBooks()
     {
         $user = Auth::user();
-        $borrowedBooks = Borrow::with('book')->where('user_id', $user->id)->get();
+        $borrowedBooks = Borrow::with('book')
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['Issued', 'Renewed']) // Include renewed books
+            ->get();
 
         return response()->json($borrowedBooks);
     }
@@ -189,7 +192,6 @@ class BorrowController extends Controller
             ->where('status', 'Issued')
             ->firstOrFail();
 
-        // Create renew request
         $renewRequest = RenewRequest::create([
             'borrow_id' => $borrow->id,
             'user_id' => auth()->id(),
@@ -201,7 +203,7 @@ class BorrowController extends Controller
 
         // Create notification for admin
         Notification::create([
-            'user_id' => 1, // Admin ID
+            'user_id' => 1,
             'book_id' => $bookId,
             'renew_request_id' => $renewRequest->id,
             'title' => 'New Renewal Request',
@@ -518,8 +520,11 @@ class BorrowController extends Controller
 
             if ($request->confirm) {
                 // User accepted the date change
+                $newDueDate = $renewRequest->admin_proposed_date ?? $renewRequest->requested_date;
+
                 $renewRequest->borrow->update([
-                    'due_date' => $renewRequest->admin_proposed_date
+                    'due_date' => $newDueDate,
+                    'status' => 'Renewed' // Update status to Renewed
                 ]);
 
                 $renewRequest->update([
@@ -533,10 +538,19 @@ class BorrowController extends Controller
                     'book_id' => $renewRequest->book_id,
                     'renew_request_id' => $renewRequest->id,
                     'title' => 'Renewal Confirmed',
-                    'message' => "User has confirmed the renewal date change",
-                    'type' => 'renewal_confirmed',
-                    'is_read' => false
+                    'message' => "User has confirmed the renewal date change for {$renewRequest->book->name}",
+                    'type' => Notification::TYPE_RENEWAL_CONFIRMED,
+                    'is_read' => false,
+                    'metadata' => [
+                        'new_due_date' => $newDueDate,
+                        'book_id' => $renewRequest->book_id,
+                        'user_id' => $renewRequest->user_id
+                    ]
                 ]);
+
+                // Send email confirmation
+                Mail::to($renewRequest->user->email)
+                    ->send(new RenewalApprovedMail($renewRequest));
             } else {
                 // User rejected the date change
                 $renewRequest->update([
@@ -550,14 +564,20 @@ class BorrowController extends Controller
                     'book_id' => $renewRequest->book_id,
                     'renew_request_id' => $renewRequest->id,
                     'title' => 'Renewal Declined',
-                    'message' => "User has declined the renewal date change",
-                    'type' => 'renewal_declined',
+                    'message' => "User has declined the renewal date change for {$renewRequest->book->name}",
+                    'type' => Notification::TYPE_RENEWAL_DECLINED,
                     'is_read' => false
                 ]);
             }
 
             DB::commit();
-            return response()->json(['message' => 'Renewal confirmation processed']);
+            return response()->json([
+                'message' => $request->confirm
+                    ? 'Renewal confirmed successfully'
+                    : 'Renewal declined',
+                'due_date' => $request->confirm ? $newDueDate : null,
+                'status' => $request->confirm ? 'Renewed' : null
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Renewal confirmation failed: " . $e->getMessage());
