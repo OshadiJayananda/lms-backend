@@ -96,4 +96,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/reservations/{reservationId}/respond', [BorrowController::class, 'respondToReservation']);
     Route::get('/user/notifications', [NotificationController::class, 'userNotifications']);
     Route::post('/renew-requests/{requestId}/confirm', [BorrowController::class, 'confirmRenewalDate']);
+    Route::post(
+        '/notifications/{notification}/renewal-response',
+        [NotificationController::class, 'handleRenewalResponse']
+    );
 });

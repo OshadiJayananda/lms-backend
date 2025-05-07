@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Notification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class NotificationController extends Controller
@@ -108,6 +109,64 @@ class NotificationController extends Controller
             Log::error('Failed to fetch user notifications: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Failed to fetch notifications',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Add this method to handle renewal confirmations
+    public function handleRenewalResponse(Request $request, $notificationId)
+    {
+        DB::beginTransaction();
+        try {
+            $validated = $request->validate([
+                'confirm' => 'required|boolean'
+            ]);
+
+            $notification = Notification::with(['renewRequest.borrow', 'renewRequest.book'])
+                ->findOrFail($notificationId);
+
+            if ($notification->type !== Notification::TYPE_RENEWAL_DATE_CHANGED) {
+                throw new \Exception('Invalid notification type for this action');
+            }
+
+            $renewRequest = $notification->renewRequest;
+            if (!$renewRequest) {
+                throw new \Exception('Associated renew request not found');
+            }
+
+            if ($validated['confirm']) {
+                // Use admin_proposed_date if available, otherwise requested_date
+                $newDueDate = $renewRequest->admin_proposed_date ?? $renewRequest->requested_date;
+
+                if (!$newDueDate) {
+                    throw new \Exception('No valid renewal date found');
+                }
+
+                $renewRequest->borrow->update([
+                    'due_date' => $newDueDate
+                ]);
+            }
+
+            $renewRequest->update([
+                'status' => $validated['confirm'] ? 'approved' : 'rejected',
+                'processed_at' => now()
+            ]);
+
+            // ... rest of your notification handling code ...
+
+            DB::commit();
+
+            return response()->json([
+                'message' => $validated['confirm']
+                    ? 'Renewal confirmed successfully'
+                    : 'Renewal declined'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Renewal response failed: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to process renewal response',
                 'error' => $e->getMessage()
             ], 500);
         }

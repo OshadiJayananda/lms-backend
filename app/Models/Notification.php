@@ -13,16 +13,19 @@ class Notification extends Model
         'user_id',
         'book_id',
         'reservation_id',
+        'renew_request_id',
         'title',
         'message',
         'type',
         'is_read',
-        'read_at'
+        'read_at',
+        'metadata'
     ];
 
     protected $casts = [
         'is_read' => 'boolean',
         'read_at' => 'datetime',
+        'metadata' => 'array'
     ];
 
     // Notification types
@@ -32,6 +35,10 @@ class Notification extends Model
     const TYPE_BOOK_AVAILABLE = 'book_available';
     const TYPE_BOOK_READY = 'book_ready_for_pickup';
     const TYPE_ADMIN_ALERT = 'admin_alert';
+    const TYPE_RENEWAL_REQUEST = 'renewal_request';
+    const TYPE_RENEWAL_DATE_CHANGED = 'renewal_date_changed';
+    const TYPE_RENEWAL_CONFIRMED = 'renewal_confirmed';
+    const TYPE_RENEWAL_DECLINED = 'renewal_declined';
 
     public function user()
     {
@@ -56,6 +63,11 @@ class Notification extends Model
                 'read_at' => now()
             ]);
         }
+    }
+
+    public function renewRequest()
+    {
+        return $this->belongsTo(RenewRequest::class);
     }
 
     public function scopeUnread($query)
