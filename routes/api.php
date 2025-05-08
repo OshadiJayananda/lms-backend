@@ -65,7 +65,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', function () {
-        return response()->json(auth()->user());
+        $user = auth()->user();
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'address' => $user->address,
+            'contact' => $user->contact,
+            'role' => $user->getRoleNames()->first()
+        ]);
     });
 
     // Route::post('/user/profile-picture', [ProfileController::class, 'updateProfilePicture']);
