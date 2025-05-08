@@ -97,6 +97,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/borrowed-books/{bookId}/renew-request', [BorrowController::class, 'renewRequest']);
     Route::post('/borrowed-books/{bookId}/notify-admin', [BorrowController::class, 'notifyAdmin']);
     Route::post('/books/{bookId}/reserve', [BookController::class, 'reserveBook']);
+    Route::get('/book-reservations', [BookController::class, 'getUserReservationList']);
     Route::post('/reservations/{reservation}/respond', [BorrowController::class, 'handleReservationResponse']);
 
     Route::post('/notifications/create', [NotificationController::class, 'create']);

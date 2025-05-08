@@ -197,6 +197,20 @@ class BookController extends Controller
         return response()->json($reservations);
     }
 
+    public function getUserReservationList()
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $reservations = BookReservation::where('user_id', $user->id)
+            ->latest()
+            ->get();
+
+        return response()->json($reservations);
+    }
+
     public function rejectReservation($reservationId)
     {
         $reservation = BookReservation::findOrFail($reservationId);
