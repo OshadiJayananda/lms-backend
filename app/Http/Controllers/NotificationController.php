@@ -149,6 +149,11 @@ class NotificationController extends Controller
                 $renewRequest->borrow->update([
                     'due_date' => $newDueDate
                 ]);
+            } else {
+                $newDueDate = $renewRequest->requested_date;
+                if (!$newDueDate) {
+                    throw new \Exception('No valid renewal date found');
+                }
             }
 
             $renewRequest->update([

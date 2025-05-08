@@ -259,7 +259,7 @@ class BorrowController extends Controller
                     $query->where('status', 'pending');
                 }
             ])
-                ->where('status', 'pending')
+                // ->where('status', 'pending')
                 ->get();
 
             return response()->json($requests);
@@ -274,35 +274,62 @@ class BorrowController extends Controller
 
     public function approveRenewRequest(Request $request, $requestId)
     {
-        $request->validate([
-            'admin_proposed_date' => 'required|date|after_or_equal:today'
-        ]);
-
         $renewRequest = RenewRequest::with(['borrow', 'user', 'book'])->findOrFail($requestId);
 
-        // Update with admin's proposed date
-        $renewRequest->update([
-            'admin_proposed_date' => $request->admin_proposed_date,
-            'status' => 'pending_user_confirmation'
-        ]);
+        if ($request->filled('admin_proposed_date')) {
+            // Validate if date is provided
+            $request->validate([
+                'admin_proposed_date' => 'required|date|after_or_equal:today'
+            ]);
 
-        // Notify user about the proposed date
-        Notification::create([
-            'user_id' => $renewRequest->user_id,
-            'book_id' => $renewRequest->book_id,
-            'renew_request_id' => $renewRequest->id,
-            'title' => 'Renewal Date Change Request',
-            'message' => "Admin has proposed a new renewal date for '{$renewRequest->book->name}': {$request->admin_proposed_date}",
-            'type' => Notification::TYPE_RENEWAL_DATE_CHANGED,
-            'is_read' => false,
-            'metadata' => [
-                'request_id' => $renewRequest->id,
-                'proposed_date' => $request->admin_proposed_date,
-                'current_due_date' => $renewRequest->current_due_date
-            ]
-        ]);
+            // Update with admin's proposed date
+            $renewRequest->update([
+                'admin_proposed_date' => $request->admin_proposed_date,
+                'status' => 'pending_user_confirmation'
+            ]);
 
-        return response()->json(['message' => 'User has been notified to confirm the new date']);
+            // Notify user about the proposed date
+            Notification::create([
+                'user_id' => $renewRequest->user_id,
+                'book_id' => $renewRequest->book_id,
+                'renew_request_id' => $renewRequest->id,
+                'title' => 'Renewal Date Change Request',
+                'message' => "Admin has proposed a new renewal date for '{$renewRequest->book->name}': {$request->admin_proposed_date}",
+                'type' => Notification::TYPE_RENEWAL_DATE_CHANGED,
+                'is_read' => false,
+                'metadata' => [
+                    'request_id' => $renewRequest->id,
+                    'proposed_date' => $request->admin_proposed_date,
+                    'current_due_date' => $renewRequest->current_due_date
+                ]
+            ]);
+
+            return response()->json(['message' => 'User has been notified to confirm the new date']);
+        } else {
+            // Direct approval (without proposed date)
+            $renewRequest->update([
+                'status' => 'approved',
+                'approved_at' => now()
+            ]);
+
+            // Notify user about the approval
+            Notification::create([
+                'user_id' => $renewRequest->user_id,
+                'book_id' => $renewRequest->book_id,
+                'renew_request_id' => $renewRequest->id,
+                'title' => 'Renewal Approved',
+                'message' => "Your renewal request for '{$renewRequest->book->name}' has been approved by the admin.",
+                'type' => Notification::TYPE_RENEWAL_APPROVED,
+                'is_read' => false,
+                'metadata' => [
+                    'request_id' => $renewRequest->id,
+                    'approved_date' => now(),
+                    'previous_due_date' => $renewRequest->current_due_date
+                ]
+            ]);
+
+            return response()->json(['message' => 'Renewal request approved successfully and user notified.']);
+        }
     }
 
     public function rejectRenewRequest($requestId)
