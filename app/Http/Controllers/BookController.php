@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateBookRequest;
 use App\Models\Book;
 use App\Models\BookReservation;
 use App\Models\Borrow;
+use App\Models\Category;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -14,30 +15,40 @@ use Illuminate\Support\Facades\Storage;
 
 class BookController extends Controller
 {
-
-
     /**
      * Display a listing of books.
      */
     public function index(Request $request)
     {
         $query = $request->query('q');
+        $categoryId = $request->query('category');
+        $categoryId = (int)$categoryId;
 
-        // If no query is provided, return all books
-        if (!$query) {
-            return response()->json(Book::all());
+        $booksQuery = Book::query();
+
+        if (!empty($categoryId)) {
+            $category = Category::find($categoryId);
+
+            if ($category && $category->childCategories()->exists()) {
+                $subCategoryIds = $category->childCategories->pluck('id')->toArray();
+                $subCategoryIds[] = $categoryId;
+
+                $booksQuery->whereIn('category_id', $subCategoryIds);
+            } else {
+                $booksQuery->where('category_id', $categoryId);
+            }
         }
 
-        // Perform the search
-        $books = Book::where('name', 'like', "%$query%")
-            ->orWhere('author', 'like', "%$query%")
-            ->orWhere('isbn', 'like', "%$query%")
-            ->get();
+        if ($query) {
+            $booksQuery->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%$query%")
+                    ->orWhere('author', 'like', "%$query%")
+                    ->orWhere('isbn', 'like', "%$query%");
+            });
+        }
+        $books = $booksQuery->get();
 
         return response()->json($books);
-
-        // $books = Book::all();
-        // return response()->json($books, 200);
     }
 
     /**
@@ -108,17 +119,25 @@ class BookController extends Controller
     {
         // Get the search query from the request
         $query = $request->query('q');
+        $categoryId = $request->query('category');
 
-        // If no query is provided, return all books
-        if (!$query) {
-            return response()->json(Book::all());
-        }
+        $booksQuery = Book::query();
 
         // Perform the search
-        $books = Book::where('name', 'like', "%$query%")
-            ->orWhere('author', 'like', "%$query%")
-            ->orWhere('isbn', 'like', "%$query%")
-            ->get();
+        if ($query) {
+            $booksQuery->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%$query%")
+                    ->orWhere('author', 'like', "%$query%")
+                    ->orWhere('isbn', 'like', "%$query%");
+            });
+        }
+
+        // Apply category filter
+        if ($categoryId) {
+            $booksQuery->where('category_id', $categoryId);
+        }
+
+        $books = $booksQuery->get();
 
         return response()->json($books);
     }
