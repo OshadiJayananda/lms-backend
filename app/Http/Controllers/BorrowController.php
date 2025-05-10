@@ -27,6 +27,18 @@ class BorrowController extends Controller
         $user = Auth::user();
         $book = Book::findOrFail($bookId);
 
+        // Check if user already has a pending request for this book
+        $existingRequest = Borrow::where('user_id', $user->id)
+            ->where('book_id', $bookId)
+            ->where('status', 'Pending')
+            ->first();
+
+        if ($existingRequest) {
+            return response()->json([
+                'message' => 'You already have a pending request for this book'
+            ], 400);
+        }
+
         if ($book->no_of_copies > 0) {
             $book->no_of_copies -= 1;
             $book->save();
@@ -50,7 +62,7 @@ class BorrowController extends Controller
         $user = Auth::user();
         $borrowedBooks = Borrow::with('book')
             ->where('user_id', $user->id)
-            ->whereIn('status', ['Issued', 'Renewed']) // Include renewed books
+            ->whereIn('status', ['Issued', 'Renewed', 'Pending'])
             ->get();
 
         return response()->json($borrowedBooks);
