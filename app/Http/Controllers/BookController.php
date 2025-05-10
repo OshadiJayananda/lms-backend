@@ -24,7 +24,7 @@ class BookController extends Controller
         $categoryId = $request->query('category');
         $categoryId = (int)$categoryId;
 
-        $booksQuery = Book::query();
+        $booksQuery = Book::with('author');
 
         if (!empty($categoryId)) {
             $category = Category::find($categoryId);
@@ -42,8 +42,10 @@ class BookController extends Controller
         if ($query) {
             $booksQuery->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%$query%")
-                    ->orWhere('author', 'like', "%$query%")
-                    ->orWhere('isbn', 'like', "%$query%");
+                    ->orWhere('isbn', 'like', "%$query%")
+                    ->orWhereHas('author', function ($q2) use ($query) {
+                        $q2->where('name', 'like', "%$query%");
+                    });
             });
         }
         $books = $booksQuery->get();
@@ -73,6 +75,8 @@ class BookController extends Controller
      */
     public function show(Book $book)
     {
+        $book->load('author');
+
         return response()->json($book);
     }
 

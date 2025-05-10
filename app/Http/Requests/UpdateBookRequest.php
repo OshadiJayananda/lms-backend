@@ -24,7 +24,7 @@ class UpdateBookRequest extends FormRequest
 
         return [
             'name' => 'nullable|string|max:255',
-            'author' => 'nullable|string|max:255',
+            'author_id' => 'nullable|exists:authors,id',
             'isbn' => [
                 'nullable',
                 'string',
