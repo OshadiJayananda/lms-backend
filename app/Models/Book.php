@@ -11,17 +11,22 @@ class Book extends Model
 
     protected $fillable = [
         'name',
-        'author',
         'isbn',
         'image',
         'description',
         'no_of_copies',
-        'category_id'
+        'category_id',
+        'author_id' // Add this
     ];
 
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function author()
+    {
+        return $this->belongsTo(Author::class);
     }
 
     public function getImageAttribute($value)

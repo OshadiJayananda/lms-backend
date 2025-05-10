@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\BorrowController;
 use App\Http\Controllers\CategoryController;
@@ -55,6 +56,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin/notifications', [NotificationController::class, 'index']);
     Route::post('/admin/book-reservations/{reservation}/create-borrow', [BookController::class, 'createBorrowFromReservation']);
     Route::post('/admin/renew-requests/{requestId}/confirm', [BorrowController::class, 'confirmRenewalDate']);
+    Route::apiResource('authors', AuthorController::class);
 });
 
 // Authenticated Routes
