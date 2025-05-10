@@ -56,7 +56,9 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin/notifications', [NotificationController::class, 'index']);
     Route::post('/admin/book-reservations/{reservation}/create-borrow', [BookController::class, 'createBorrowFromReservation']);
     Route::post('/admin/renew-requests/{requestId}/confirm', [BorrowController::class, 'confirmRenewalDate']);
-    Route::apiResource('authors', AuthorController::class);
+    Route::post('authors', [AuthorController::class, 'store']);
+    Route::put('authors/{author}', [AuthorController::class, 'update']);
+    Route::delete('authors/{author}', [AuthorController::class, 'destroy']);
 });
 
 // Authenticated Routes
@@ -77,6 +79,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
             'role' => $user->getRoleNames()->first()
         ]);
     });
+
+    Route::get('authors', [AuthorController::class, 'index']);
+    Route::get('authors/{author}', [AuthorController::class, 'show']);
 
     // Route::post('/user/profile-picture', [ProfileController::class, 'updateProfilePicture']);
     // Route::post('/user/change-password', [ProfileController::class, 'changePassword']);
