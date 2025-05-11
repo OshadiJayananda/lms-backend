@@ -368,11 +368,51 @@ class BookController extends Controller
             ->where('due_date', '<', Carbon::now())
             ->count();
 
+        // Books Borrowed Per Month (last 6 months)
+        $borrowedPerMonth = Borrow::selectRaw('MONTH(issued_date) as month, COUNT(*) as count')
+            ->whereYear('issued_date', now()->year)
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+        // Top Borrowing Members (by total borrows)
+        $topMembers = User::role('user')
+            ->select('id', 'name')
+            ->withCount('borrowedBooks')
+            ->orderByDesc('borrowed_books_count')
+            ->limit(5)
+            ->get();
+
+        // Most Borrowed Books
+        $topBooks = Book::select('id', 'name')
+            ->withCount('borrows')
+            ->orderByDesc('borrows_count')
+            ->limit(5)
+            ->get();
+
+        // Recent Book Requests
+        $recentRequests = Borrow::with(['user', 'book'])->where('status', 'Pending')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        // Recently Added Books
+        $recentBooks = Book::latest()->take(5)->get();
+
+        // Recent Members
+        $recentMembers = User::role('user')->latest()->take(5)->get();
+
         return response()->json([
             'totalBooks' => $totalBooks,
             'totalMembers' => $totalMembers,
             'borrowedBooks' => $borrowedBooks,
             'overdueBooks' => $overdueBooks,
+            'borrowedPerMonth' => $borrowedPerMonth,
+            'topMembers' => $topMembers,
+            'topBooks' => $topBooks,
+            'recentRequests' => $recentRequests,
+            'recentBooks' => $recentBooks,
+            'recentMembers' => $recentMembers,
         ]);
     }
 }
