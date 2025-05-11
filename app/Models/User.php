@@ -39,4 +39,14 @@ class User extends Authenticatable
     {
         $this->notify(new CustomResetPassword($token));
     }
+
+    public function borrowedBooks()
+    {
+        return $this->hasMany(\App\Models\Borrow::class);
+    }
+
+    public function returnedBooks()
+    {
+        return $this->hasMany(\App\Models\Borrow::class)->whereIn('status', ['Confirmed', 'Returned']);
+    }
 }

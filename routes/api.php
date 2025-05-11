@@ -6,6 +6,7 @@ use App\Http\Controllers\BookController;
 use App\Http\Controllers\BorrowController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ForgotPasswordController;
+use App\Http\Controllers\MemberController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Http\Request;
@@ -59,6 +60,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::post('authors', [AuthorController::class, 'store']);
     Route::put('authors/{author}', [AuthorController::class, 'update']);
     Route::delete('authors/{author}', [AuthorController::class, 'destroy']);
+    Route::get('admin/members', [MemberController::class, 'index']);
 });
 
 // Authenticated Routes
