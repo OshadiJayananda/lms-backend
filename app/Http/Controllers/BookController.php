@@ -244,6 +244,7 @@ class BookController extends Controller
         Notification::create([
             'user_id' => $reservation->user_id,
             'book_id' => $reservation->book_id,
+            'title' => 'Reservation Rejected',
             'message' => "Your reservation for {$reservation->book->name} has been rejected",
             'type' => 'reservation_rejected',
             'user_notified' => false,
