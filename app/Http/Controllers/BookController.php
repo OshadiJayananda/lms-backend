@@ -9,6 +9,8 @@ use App\Models\BookReservation;
 use App\Models\Borrow;
 use App\Models\Category;
 use App\Models\Notification;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -354,6 +356,23 @@ class BookController extends Controller
         return response()->json([
             'message' => 'Borrow record created',
             'borrow' => $borrow
+        ]);
+    }
+
+    public function getDashboardStats()
+    {
+        $totalBooks = Book::count();
+        $totalMembers = User::role('user')->count();
+        $borrowedBooks = Borrow::where('status', 'Issued')->count();
+        $overdueBooks = Borrow::where('status', 'Issued')
+            ->where('due_date', '<', Carbon::now())
+            ->count();
+
+        return response()->json([
+            'totalBooks' => $totalBooks,
+            'totalMembers' => $totalMembers,
+            'borrowedBooks' => $borrowedBooks,
+            'overdueBooks' => $overdueBooks,
         ]);
     }
 }

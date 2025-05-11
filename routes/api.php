@@ -61,6 +61,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::put('authors/{author}', [AuthorController::class, 'update']);
     Route::delete('authors/{author}', [AuthorController::class, 'destroy']);
     Route::get('admin/members', [MemberController::class, 'index']);
+    Route::get('/admin/dashboard-stats', [BookController::class, 'getDashboardStats']);
 });
 
 // Authenticated Routes
