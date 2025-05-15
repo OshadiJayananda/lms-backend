@@ -415,4 +415,32 @@ class BookController extends Controller
             'recentMembers' => $recentMembers,
         ]);
     }
+
+    public function getUserDashboardStats(Request $request)
+    {
+        $user = auth()->user();
+
+        $borrowed = $user->borrowedBooks()->where('status', 'Issued')->count();
+        $returned = $user->borrowedBooks()->where('status', 'Returned')->count();
+        $overdue = $user->borrowedBooks()
+            ->where('status', 'Issued')
+            ->where('due_date', '<', now())
+            ->count();
+
+        $borrowLimit = 5;
+        $borrowDuration = '2 weeks';
+        $finePerDay = 50;
+
+        $latestBooks = Book::latest()->take(5)->select('id', 'name', 'image')->get();
+
+        return response()->json([
+            'borrowed' => $borrowed,
+            'returned' => $returned,
+            'overdue' => $overdue,
+            'borrowLimit' => $borrowLimit,
+            'borrowDuration' => $borrowDuration,
+            'finePerDay' => $finePerDay,
+            'latestBooks' => $latestBooks,
+        ]);
+    }
 }
