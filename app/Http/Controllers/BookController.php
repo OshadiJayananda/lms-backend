@@ -433,6 +433,27 @@ class BookController extends Controller
 
         $latestBooks = Book::latest()->take(5)->select('id', 'name', 'image')->get();
 
+        // Get monthly stats for the last 6 months
+        $monthlyStats = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $monthName = $date->format('M Y');
+
+            $monthlyStats[] = [
+                'month' => $monthName,
+                'borrowed' => $user->borrowedBooks()
+                    ->where('status', 'Issued')
+                    ->whereMonth('issued_date', $date->month)
+                    ->whereYear('issued_date', $date->year)
+                    ->count(),
+                'returned' => $user->borrowedBooks()
+                    ->where('status', 'Returned')
+                    ->whereMonth('returned_date', $date->month)
+                    ->whereYear('returned_date', $date->year)
+                    ->count(),
+            ];
+        }
+
         return response()->json([
             'borrowed' => $borrowed,
             'returned' => $returned,
@@ -441,6 +462,7 @@ class BookController extends Controller
             'borrowDuration' => $borrowDuration,
             'finePerDay' => $finePerDay,
             'latestBooks' => $latestBooks,
+            'monthlyStats' => $monthlyStats,
         ]);
     }
 }

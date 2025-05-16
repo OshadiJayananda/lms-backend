@@ -14,6 +14,7 @@ class Borrow extends Model
         'book_id',
         'issued_date',
         'due_date',
+        'returned_date',
         'status',
     ];
 

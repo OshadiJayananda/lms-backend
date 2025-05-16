@@ -69,7 +69,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/validate-token', [AuthController::class, 'validateToken']);
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{category}', [CategoryController::class, 'show']);
-    Route::get('user/dashboard-stats', [BookController::class, 'getUserDashboardStats']);
+    Route::get('/user/dashboard-stats', [BookController::class, 'getUserDashboardStats']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', function () {

@@ -126,19 +126,28 @@ class BorrowController extends Controller
     {
         $borrow = Borrow::where('book_id', $bookId)
             ->where('user_id', auth()->id())
+            ->where('status', 'Issued')
             ->latest()
             ->firstOrFail();
-        // Check if the book is issued and can be returned
-        if ($borrow->status !== 'Issued') {
-            return response()->json(['message' => 'This book cannot be returned.'], 400);
+
+        // Update the status and set returned date
+        $borrow->update([
+            'status' => 'Returned',
+            'returned_date' => now() // Add this line
+        ]);
+
+        // Increment the book's available copies count
+        $book = Book::find($bookId);
+        if ($book) {
+            $book->increment('no_of_copies');
         }
 
-        // Update the status to "Returned"
-        $borrow->status = 'Returned';
-        $borrow->save();
-
-
-        return response()->json(['message' => 'Book returned successfully!']);
+        return response()->json([
+            'message' => 'Book returned successfully!',
+            'data' => [
+                'returned_date' => $borrow->fresh()->returned_date
+            ]
+        ]);
     }
 
     public function getReturnedBooks()
