@@ -281,6 +281,7 @@ class BorrowController extends Controller
                 }
             ])
                 // ->where('status', 'pending')
+                ->orderBy('created_at', 'desc')
                 ->get();
 
             return response()->json($requests);
