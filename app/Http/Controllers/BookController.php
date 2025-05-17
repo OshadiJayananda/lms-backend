@@ -420,8 +420,9 @@ class BookController extends Controller
     {
         $user = auth()->user();
 
-        $borrowed = $user->borrowedBooks()->where('status', 'Issued')->count();
-        $returned = $user->borrowedBooks()->where('status', 'Returned')->count();
+        $active_borrowed = $user->borrowedBooks()->where('status', 'Issued')->count();
+        $borrowed = $user->borrowedBooks()->count();
+        $returned = $user->borrowedBooks()->whereIn('status', ['Returned', 'Confirmed'])->count();
         $overdue = $user->borrowedBooks()
             ->where('status', 'Issued')
             ->where('due_date', '<', now())
@@ -435,19 +436,25 @@ class BookController extends Controller
 
         // Get monthly stats for the last 6 months
         $monthlyStats = [];
-        for ($i = 5; $i >= 0; $i--) {
+
+        $createdAt = $user->created_at->startOfMonth();
+        $currentMonth = now()->startOfMonth();
+
+        $diffInMonths = $createdAt->diffInMonths($currentMonth);
+        $monthsToShow = min($diffInMonths + 1, 6);
+        for ($i = $monthsToShow - 1; $i >= 0; $i--) {
             $date = now()->subMonths($i);
             $monthName = $date->format('M Y');
 
             $monthlyStats[] = [
                 'month' => $monthName,
                 'borrowed' => $user->borrowedBooks()
-                    ->where('status', 'Issued')
+                    // ->where('status', 'Issued')
                     ->whereMonth('issued_date', $date->month)
                     ->whereYear('issued_date', $date->year)
                     ->count(),
-                'returned' => $user->borrowedBooks()
-                    ->where('status', 'Returned')
+                'returned' => $user->returnedBooks()
+                    // ->where('status', 'Returned')
                     ->whereMonth('returned_date', $date->month)
                     ->whereYear('returned_date', $date->year)
                     ->count(),
@@ -455,6 +462,7 @@ class BookController extends Controller
         }
 
         return response()->json([
+            'active_borrowed' => $active_borrowed,
             'borrowed' => $borrowed,
             'returned' => $returned,
             'overdue' => $overdue,
