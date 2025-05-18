@@ -57,7 +57,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     // Route::get('/admin/notifications', [NotificationController::class, 'getNotifications']);
     Route::post('/admin/book-reservations/{reservationId}/confirm-given', [BookReservationController::class, 'confirmBookGiven']);
     Route::get('/admin/notifications', [NotificationController::class, 'index']);
-    Route::post('/admin/book-reservations/{reservation}/create-borrow', [BookController::class, 'createBorrowFromReservation']);
+    Route::post('/admin/book-reservations/{reservation}/create-borrow', [BorrowController::class, 'createBorrowFromReservation']);
     Route::post('/admin/renew-requests/{requestId}/confirm', [RenewBookController::class, 'confirmRenewalDate']);
     Route::post('authors', [AuthorController::class, 'store']);
     Route::put('authors/{author}', [AuthorController::class, 'update']);

@@ -133,37 +133,6 @@ class BookController extends Controller
         return response()->json(['exists' => $exists]);
     }
 
-
-    public function createBorrowFromReservation($reservationId)
-    {
-        $reservation = BookReservation::with('book', 'user')->findOrFail($reservationId);
-        $book = $reservation->book;
-        $user = $reservation->user;
-
-        if ($book->no_of_copies <= 0) {
-            return response()->json([
-                'message' => 'No copies available'
-            ], 400);
-        }
-
-        // Create borrow record
-        $borrow = Borrow::create([
-            'user_id' => $user->id,
-            'book_id' => $book->id,
-            'issued_date' => now(),
-            'due_date' => now()->addWeeks(2),
-            'status' => 'Issued'
-        ]);
-
-        // Reduce book copies
-        $book->decrement('no_of_copies');
-
-        return response()->json([
-            'message' => 'Borrow record created',
-            'borrow' => $borrow
-        ]);
-    }
-
     public function getDashboardStats()
     {
         $totalBooks = Book::count();
