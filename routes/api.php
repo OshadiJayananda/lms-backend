@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BorrowingPolicyController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\BookController;
@@ -62,6 +63,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::delete('authors/{author}', [AuthorController::class, 'destroy']);
     Route::get('admin/members', [MemberController::class, 'index']);
     Route::get('/admin/dashboard-stats', [BookController::class, 'getDashboardStats']);
+    Route::put('/borrowing-policies', [BorrowingPolicyController::class, 'update']);
+    Route::delete('/borrowing-policies', [BorrowingPolicyController::class, 'destroy']);
 });
 
 // Authenticated Routes
@@ -70,6 +73,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{category}', [CategoryController::class, 'show']);
     Route::get('/user/dashboard-stats', [BookController::class, 'getUserDashboardStats']);
+    Route::get('/borrowing-policies', [BorrowingPolicyController::class, 'index']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', function () {
