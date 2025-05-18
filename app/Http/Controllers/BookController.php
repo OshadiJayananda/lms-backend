@@ -119,36 +119,6 @@ class BookController extends Controller
     }
 
     /**
-     * Search for books based on a query.
-     */
-    public function search(Request $request)
-    {
-        // Get the search query from the request
-        $query = $request->query('q');
-        $categoryId = $request->query('category');
-
-        $booksQuery = Book::query();
-
-        // Perform the search
-        if ($query) {
-            $booksQuery->where(function ($q) use ($query) {
-                $q->where('name', 'like', "%$query%")
-                    ->orWhere('author', 'like', "%$query%")
-                    ->orWhere('isbn', 'like', "%$query%");
-            });
-        }
-
-        // Apply category filter
-        if ($categoryId) {
-            $booksQuery->where('category_id', $categoryId);
-        }
-
-        $books = $booksQuery->get();
-
-        return response()->json($books);
-    }
-
-    /**
      * Check if the ISBN is unique.
      */
     public function checkIsbn(Request $request)
