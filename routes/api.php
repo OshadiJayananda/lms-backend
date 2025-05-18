@@ -49,8 +49,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::post('/admin/renew-requests/{requestId}/reject', [RenewBookController::class, 'rejectRenewRequest']);
 
     // Availability notifications
-    Route::get('/admin/availability-notifications', [BorrowController::class, 'checkAvailabilityNotifications']);
-    Route::post('/admin/notify-available/{bookId}', [BorrowController::class, 'notifyAvailableBooks']);
+    // Route::get('/admin/availability-notifications', [BorrowController::class, 'checkAvailabilityNotifications']);
+    // Route::post('/admin/notify-available/{bookId}', [BorrowController::class, 'notifyAvailableBooks']);
     Route::get('/admin/book-reservations', [BookReservationController::class, 'getReservations']);
     Route::post('/admin/book-reservations/{reservationId}/approve', [BookReservationController::class, 'approveReservation']);
     Route::post('/admin/book-reservations/{reservationId}/reject', [BookReservationController::class, 'rejectReservation']);
@@ -107,11 +107,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/borrowed-books/{bookId}/renew', [RenewBookController::class, 'renewBook']);
 
     // Book availability check
-    Route::get('/books/{bookId}/availability', [BorrowController::class, 'checkBookAvailability']);
+    // Route::get('/books/{bookId}/availability', [BorrowController::class, 'checkBookAvailability']);
 
     // Renewal requests
     Route::post('/borrowed-books/{bookId}/renew-request', [RenewBookController::class, 'renewRequest']);
-    Route::post('/borrowed-books/{bookId}/notify-admin', [BorrowController::class, 'notifyAdmin']);
+    Route::post('/borrowed-books/{bookId}/notify-admin', [RenewBookController::class, 'notifyAdmin']);
     Route::post('/books/{bookId}/reserve', [BookReservationController::class, 'reserveBook']);
     Route::get('/book-reservations', [BookReservationController::class, 'getUserReservationList']);
     Route::post('/reservations/{reservation}/respond', [BookReservationController::class, 'handleReservationResponse']);

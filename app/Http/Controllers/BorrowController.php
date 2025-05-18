@@ -176,65 +176,6 @@ class BorrowController extends Controller
         return response()->json($borrowedBooks);
     }
 
-    public function checkBookAvailability($bookId)
-    {
-        $book = Book::findOrFail($bookId);
-        return response()->json([
-            'available' => $book->no_of_copies > 0,
-            'copies_available' => $book->no_of_copies
-        ]);
-    }
-
-    public function notifyAdmin(Request $request, $bookId)
-    {
-        $request->validate([
-            'requestedDate' => 'required|date'
-        ]);
-
-        $user = auth()->user();
-        $book = Book::findOrFail($bookId);
-
-        // Create notification
-        BookAvailabilityNotification::create([
-            'user_id' => $user->id,
-            'book_id' => $bookId,
-            'requested_date' => $request->requestedDate,
-            'notified' => false
-        ]);
-
-        return response()->json(['message' => 'Admin will be notified when copies become available']);
-    }
-
-    // Admin method to check for availability notifications
-    public function checkAvailabilityNotifications()
-    {
-        $notifications = BookAvailabilityNotification::with(['user', 'book'])
-            ->where('notified', false)
-            ->get();
-
-        return response()->json($notifications);
-    }
-
-    // Method to notify users when books become available
-    public function notifyAvailableBooks($bookId)
-    {
-        $book = Book::findOrFail($bookId);
-        $notifications = BookAvailabilityNotification::with('user')
-            ->where('book_id', $bookId)
-            ->where('notified', false)
-            ->get();
-
-        foreach ($notifications as $notification) {
-            Mail::to($notification->user->email)
-                ->send(new BookAvailableNotification($book, $notification->requested_date));
-
-            $notification->notified = true;
-            $notification->save();
-        }
-
-        return response()->json(['message' => 'Users notified about book availability']);
-    }
-
     public function confirmReturn($borrowId)
     {
         $borrow = Borrow::findOrFail($borrowId);
@@ -285,4 +226,44 @@ class BorrowController extends Controller
 
         return response()->json(['message' => 'Return confirmed successfully!']);
     }
+
+    // public function checkBookAvailability($bookId)
+    // {
+    //     $book = Book::findOrFail($bookId);
+    //     return response()->json([
+    //         'available' => $book->no_of_copies > 0,
+    //         'copies_available' => $book->no_of_copies
+    //     ]);
+    // }
+
+
+    // public function checkAvailabilityNotifications()
+    // {
+    //     $notifications = BookAvailabilityNotification::with(['user', 'book'])
+    //         ->where('notified', false)
+    //         ->get();
+
+    //     return response()->json($notifications);
+    // }
+
+    // public function notifyAvailableBooks($bookId)
+    // {
+    //     $book = Book::findOrFail($bookId);
+    //     $notifications = BookAvailabilityNotification::with('user')
+    //         ->where('book_id', $bookId)
+    //         ->where('notified', false)
+    //         ->get();
+
+    //     foreach ($notifications as $notification) {
+    //         Mail::to($notification->user->email)
+    //             ->send(new BookAvailableNotification($book, $notification->requested_date));
+
+    //         $notification->notified = true;
+    //         $notification->save();
+    //     }
+
+    //     return response()->json(['message' => 'Users notified about book availability']);
+    // }
+
+
 }

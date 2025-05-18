@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Mail\RenewalApprovedMail;
 use App\Mail\RenewalRejectedMail;
+use App\Models\Book;
+use App\Models\BookAvailabilityNotification;
 use App\Models\Borrow;
 use App\Models\Notification;
 use App\Models\RenewRequest;
@@ -254,5 +256,24 @@ class RenewBookController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+    public function notifyAdmin(Request $request, $bookId)
+    {
+        $request->validate([
+            'requestedDate' => 'required|date'
+        ]);
+
+        $user = auth()->user();
+        $book = Book::findOrFail($bookId);
+
+        // Create notification
+        BookAvailabilityNotification::create([
+            'user_id' => $user->id,
+            'book_id' => $bookId,
+            'requested_date' => $request->requestedDate,
+            'notified' => false
+        ]);
+
+        return response()->json(['message' => 'Admin will be notified when copies become available']);
     }
 }
