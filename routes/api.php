@@ -20,7 +20,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::get('/books/search', [BookController::class, 'search']);
 Route::get('/books/check-isbn', [BookController::class, 'checkIsbn']);
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])
     ->middleware('guest')
