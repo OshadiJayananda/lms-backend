@@ -4,12 +4,14 @@ use App\Http\Controllers\BorrowingPolicyController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\BookController;
+use App\Http\Controllers\BookReservationController;
 use App\Http\Controllers\BorrowController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RenewBookController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -42,21 +44,21 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin/returned-books', [BorrowController::class, 'getReturnedBooks']);
     Route::post('/admin/returned-books/{borrowId}/confirm', [BorrowController::class, 'confirmReturn']);
     Route::get('/admin/borrowed-books', [BorrowController::class, 'getAllBorrowedBooks']);
-    Route::get('/admin/renew-requests', [BorrowController::class, 'getRenewRequests']);
-    Route::post('/admin/renew-requests/{requestId}/approve', [BorrowController::class, 'approveRenewRequest']);
-    Route::post('/admin/renew-requests/{requestId}/reject', [BorrowController::class, 'rejectRenewRequest']);
+    Route::get('/admin/renew-requests', [RenewBookController::class, 'getRenewRequests']);
+    Route::post('/admin/renew-requests/{requestId}/approve', [RenewBookController::class, 'approveRenewRequest']);
+    Route::post('/admin/renew-requests/{requestId}/reject', [RenewBookController::class, 'rejectRenewRequest']);
 
     // Availability notifications
     Route::get('/admin/availability-notifications', [BorrowController::class, 'checkAvailabilityNotifications']);
     Route::post('/admin/notify-available/{bookId}', [BorrowController::class, 'notifyAvailableBooks']);
-    Route::get('/admin/book-reservations', [BookController::class, 'getReservations']);
-    Route::post('/admin/book-reservations/{reservationId}/approve', [BookController::class, 'approveReservation']);
-    Route::post('/admin/book-reservations/{reservationId}/reject', [BookController::class, 'rejectReservation']);
+    Route::get('/admin/book-reservations', [BookReservationController::class, 'getReservations']);
+    Route::post('/admin/book-reservations/{reservationId}/approve', [BookReservationController::class, 'approveReservation']);
+    Route::post('/admin/book-reservations/{reservationId}/reject', [BookReservationController::class, 'rejectReservation']);
     // Route::get('/admin/notifications', [NotificationController::class, 'getNotifications']);
-    Route::post('/admin/book-reservations/{reservationId}/confirm-given', [BookController::class, 'confirmBookGiven']);
+    Route::post('/admin/book-reservations/{reservationId}/confirm-given', [BookReservationController::class, 'confirmBookGiven']);
     Route::get('/admin/notifications', [NotificationController::class, 'index']);
     Route::post('/admin/book-reservations/{reservation}/create-borrow', [BookController::class, 'createBorrowFromReservation']);
-    Route::post('/admin/renew-requests/{requestId}/confirm', [BorrowController::class, 'confirmRenewalDate']);
+    Route::post('/admin/renew-requests/{requestId}/confirm', [RenewBookController::class, 'confirmRenewalDate']);
     Route::post('authors', [AuthorController::class, 'store']);
     Route::put('authors/{author}', [AuthorController::class, 'update']);
     Route::delete('authors/{author}', [AuthorController::class, 'destroy']);
@@ -102,24 +104,24 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/books/{bookId}/request', [BorrowController::class, 'requestBook']);
     Route::get('/borrowed-books', [BorrowController::class, 'getBorrowedBooks']);
     Route::post('/borrowed-books/{bookId}/return', [BorrowController::class, 'returnBook']);
-    Route::post('/borrowed-books/{bookId}/renew', [BorrowController::class, 'renewBook']);
+    Route::post('/borrowed-books/{bookId}/renew', [RenewBookController::class, 'renewBook']);
 
     // Book availability check
     Route::get('/books/{bookId}/availability', [BorrowController::class, 'checkBookAvailability']);
 
     // Renewal requests
-    Route::post('/borrowed-books/{bookId}/renew-request', [BorrowController::class, 'renewRequest']);
+    Route::post('/borrowed-books/{bookId}/renew-request', [RenewBookController::class, 'renewRequest']);
     Route::post('/borrowed-books/{bookId}/notify-admin', [BorrowController::class, 'notifyAdmin']);
-    Route::post('/books/{bookId}/reserve', [BookController::class, 'reserveBook']);
-    Route::get('/book-reservations', [BookController::class, 'getUserReservationList']);
-    Route::post('/reservations/{reservation}/respond', [BorrowController::class, 'handleReservationResponse']);
+    Route::post('/books/{bookId}/reserve', [BookReservationController::class, 'reserveBook']);
+    Route::get('/book-reservations', [BookReservationController::class, 'getUserReservationList']);
+    Route::post('/reservations/{reservation}/respond', [BookReservationController::class, 'handleReservationResponse']);
 
     Route::post('/notifications/create', [NotificationController::class, 'create']);
     Route::post('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-    Route::post('/reservations/{reservationId}/respond', [BorrowController::class, 'respondToReservation']);
+    Route::post('/reservations/{reservationId}/respond', [BookReservationController::class, 'respondToReservation']);
     Route::get('/user/notifications', [NotificationController::class, 'userNotifications']);
-    Route::post('/renew-requests/{requestId}/confirm', [BorrowController::class, 'confirmRenewalDate']);
+    Route::post('/renew-requests/{requestId}/confirm', [RenewBookController::class, 'confirmRenewalDate']);
     Route::post(
         '/notifications/{notification}/renewal-response',
         [NotificationController::class, 'handleRenewalResponse']
