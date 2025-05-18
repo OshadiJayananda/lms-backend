@@ -9,7 +9,7 @@ class MemberController extends Controller
 {
     public function index()
     {
-        $members = User::role('user')->select('id', 'name', 'email', 'contact')
+        $members = User::role('user')->select('id', 'name', 'email', 'contact', 'created_at')
             ->withCount([
                 'borrowedBooks as total_borrowed',
                 'returnedBooks as total_returned',
