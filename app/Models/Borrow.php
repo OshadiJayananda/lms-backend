@@ -16,6 +16,7 @@ class Borrow extends Model
         'due_date',
         'returned_date',
         'status',
+        'fine_paid',
     ];
 
     public function user()

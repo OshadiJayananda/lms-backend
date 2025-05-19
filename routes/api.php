@@ -10,6 +10,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RenewBookController;
 use Illuminate\Http\Request;
@@ -126,4 +127,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         '/notifications/{notification}/renewal-response',
         [NotificationController::class, 'handleRenewalResponse']
     );
+
+
+    //Paymrnt routes
+    Route::post('/payments/create-checkout-session/{borrow}', [PaymentController::class, 'createCheckoutSession']);
+    Route::get('/payments/success', [PaymentController::class, 'paymentSuccess']);
+    Route::get('/payments/cancel', [PaymentController::class, 'paymentCancel']);
+    Route::post('/stripe/webhook', [PaymentController::class, 'handleWebhook']);
+    Route::get('/payments/history', [PaymentController::class, 'getPaymentHistory']);
 });

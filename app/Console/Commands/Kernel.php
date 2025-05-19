@@ -17,6 +17,11 @@ class Kernel extends ConsoleKernel
     {
         // Run the reminder command daily at 8:00 AM
         $schedule->command('reminders:send')->dailyAt('08:00');
+
+        // Check for overdue books daily at midnight
+        $schedule->command('books:mark-overdue')
+            ->dailyAt('00:00')
+            ->onFailure(function () {});
     }
 
     /**
