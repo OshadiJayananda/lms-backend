@@ -61,9 +61,9 @@ class BorrowController extends Controller
     public function getBorrowedBooks()
     {
         $user = Auth::user();
-        $borrowedBooks = Borrow::with('book')
+        $borrowedBooks = Borrow::with('book', 'book.author')
             ->where('user_id', $user->id)
-            ->whereIn('status', ['Issued', 'Renewed', 'Pending'])
+            ->whereIn('status', ['Issued', 'Renewed', 'Pending', 'Approved'])
             ->get();
 
         return response()->json($borrowedBooks);
