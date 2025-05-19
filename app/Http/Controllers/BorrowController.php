@@ -261,6 +261,33 @@ class BorrowController extends Controller
             'borrow' => $borrow
         ]);
     }
+
+    public function getOverdueBooks()
+    {
+        $overdueBooks = Borrow::with(['user', 'book'])
+            ->where('status', 'Issued')
+            ->where('due_date', '<', now())
+            ->where('fine_paid', false)
+            ->get()
+            ->map(function ($borrow) {
+                $borrow->is_overdue = true;
+                $borrow->fine_amount = $borrow->calculateFine();
+                return $borrow;
+            });
+
+        return response()->json($overdueBooks);
+    }
+
+    public function markAsOverdue()
+    {
+        // This could be run as a daily cron job
+        $overdueBooks = Borrow::where('status', 'Issued')
+            ->where('due_date', '<', now())
+            ->where('fine_paid', false)
+            ->update(['status' => 'Overdue']);
+
+        return response()->json(['message' => 'Overdue books updated']);
+    }
     // public function checkBookAvailability($bookId)
     // {
     //     $book = Book::findOrFail($bookId);
