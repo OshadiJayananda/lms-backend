@@ -66,7 +66,7 @@ class PaymentController extends Controller
         $sigHeader = $request->header('Stripe-Signature');
         $endpointSecret = config('services.stripe.webhook_secret');
 
-        // Log::info('Stripe Webhook Received', ['payload' => $payload]);
+        Log::info('Stripe Webhook Received', ['payload' => $payload]);
 
         try {
             $event = \Stripe\Webhook::constructEvent(
@@ -87,7 +87,7 @@ class PaymentController extends Controller
                 case 'checkout.session.completed':
                     $session = $event->data->object;
 
-                    // Log::info('Checkout Session Completed', ['session' => $session]);
+                    Log::info('Checkout Session Completed', ['session' => $session]);
                     $paymentIntentId = $event->data->object->id;
 
                     $alreadyProcessed = Payment::where('stripe_payment_id', $paymentIntentId)->exists();
