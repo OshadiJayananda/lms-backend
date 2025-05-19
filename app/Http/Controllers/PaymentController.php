@@ -21,7 +21,12 @@ class PaymentController extends Controller
         }
 
         $fineAmount = $borrow->calculateFine();
+        $minimumLKR = 150; // about $0.50
+        if ($fineAmount < $minimumLKR) {
+            return response()->json(['message' => 'Minimum payment amount must be at least 150 LKR due to Stripe limits.'], 400);
+        }
         $fineAmountInCents = $fineAmount * 100;
+        $currency = config('services.stripe.currency', 'lkr');
 
         Stripe::setApiKey(config('services.stripe.secret'));
 
@@ -30,7 +35,7 @@ class PaymentController extends Controller
                 'payment_method_types' => ['card'],
                 'line_items' => [[
                     'price_data' => [
-                        'currency' => 'usd',
+                        'currency' => $currency,
                         'product_data' => [
                             'name' => 'Overdue Fine: ' . $borrow->book->name,
                         ],
