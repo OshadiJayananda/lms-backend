@@ -83,6 +83,13 @@ class PaymentController extends Controller
                     $session = $event->data->object;
 
                     // Log::info('Checkout Session Completed', ['session' => $session]);
+                    $paymentIntentId = $event->data->object->id;
+
+                    $alreadyProcessed = Payment::where('stripe_payment_id', $paymentIntentId)->exists();
+                    if ($alreadyProcessed) {
+                        Log::info('Payment already processed: ' . $paymentIntentId);
+                        return response('OK', 200);
+                    }
 
                     Payment::create([
                         'user_id' => $session->metadata->user_id,
