@@ -11,6 +11,7 @@ use App\Models\Borrow;
 use App\Models\Book;
 use App\Models\BookAvailabilityNotification;
 use App\Models\BookReservation;
+use App\Models\BorrowingPolicy;
 use App\Models\Notification;
 use App\Models\RenewRequest;
 use App\Models\User;
@@ -46,8 +47,8 @@ class BorrowController extends Controller
             Borrow::create([
                 'user_id' => $user->id,
                 'book_id' => $bookId,
-                'issued_date' => now(),
-                'due_date' => now()->addDays(30),
+                // 'issued_date' => now(),
+                // 'due_date' => now()->addDays(30),
                 'status' => 'Pending',
             ]);
 
@@ -70,7 +71,7 @@ class BorrowController extends Controller
 
     public function getPendingRequests()
     {
-        $pendingRequests = Borrow::with(['user', 'book'])->where('status', 'Pending')->get();
+        $pendingRequests = Borrow::with(['user', 'book'])->whereIn('status', ['Pending', 'Approved'])->get();
         return response()->json($pendingRequests);
     }
 
@@ -107,10 +108,14 @@ class BorrowController extends Controller
     {
         $borrow = Borrow::findOrFail($borrowId);
 
-        // Update status and set due date to 2 weeks from now
+        // Get current borrowing policy
+        $policy = BorrowingPolicy::currentPolicy();
+        $borrowDuration = $policy->borrow_duration_days ?? 14;
+
+        // Update status and set due date based on policy
         $borrow->status = 'Issued';
-        $borrow->issued_date = now(); // Set the issued date to now
-        $borrow->due_date = now()->addWeeks(2); // Set due date to 2 weeks from now
+        $borrow->issued_date = now();
+        $borrow->due_date = now()->addDays($borrowDuration);
         $borrow->save();
 
         // Send email to user

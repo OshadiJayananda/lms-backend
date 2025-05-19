@@ -17,7 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('book_id'); // Foreign key for the borrowed book
             $table->date('issued_date'); // Date when the book was issued
             $table->date('due_date'); // Due date for returning the book
-            $table->string('status')->default('Pending'); // Status of the borrow request (e.g., 'Pending', 'Issued', 'Confirmed', 'Returned', 'Expired')
+            $table->string('status')->default('Pending'); // Status of the borrow request (e.g., 'Pending', 'Approved', 'Issued', 'Returned', 'Expired', 'Rejected')
             $table->timestamps(); // Created at and updated at timestamps
 
             // Foreign key constraints
