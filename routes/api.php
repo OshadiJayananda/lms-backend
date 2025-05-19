@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
 // })->middleware('auth:sanctum');
-
+Route::post('/stripe/webhook', [PaymentController::class, 'handleWebhook']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/books/check-isbn', [BookController::class, 'checkIsbn']);
@@ -107,6 +107,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/borrowed-books/{bookId}/return', [BorrowController::class, 'returnBook']);
     Route::post('/borrowed-books/{bookId}/renew', [RenewBookController::class, 'renewBook']);
 
+    // getOverdueBooks
+    Route::get('/borrows/overdue', [BorrowController::class, 'getOverdueBooks']);
+
     // Book availability check
     // Route::get('/books/{bookId}/availability', [BorrowController::class, 'checkBookAvailability']);
 
@@ -131,8 +134,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Paymrnt routes
     Route::post('/payments/create-checkout-session/{borrow}', [PaymentController::class, 'createCheckoutSession']);
-    Route::get('/payments/success', [PaymentController::class, 'paymentSuccess']);
-    Route::get('/payments/cancel', [PaymentController::class, 'paymentCancel']);
-    Route::post('/stripe/webhook', [PaymentController::class, 'handleWebhook']);
+    Route::get('/payments/success', [PaymentController::class, 'paymentSuccess'])->name('payment.success');
+    Route::get('/payments/cancel', [PaymentController::class, 'paymentCancel'])->name('payment.cancel');
     Route::get('/payments/history', [PaymentController::class, 'getPaymentHistory']);
 });

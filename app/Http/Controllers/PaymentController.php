@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Borrow;
 use App\Models\Payment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Stripe\Stripe;
 use Stripe\Checkout\Session;
 use Stripe\Exception\ApiErrorException;
@@ -38,12 +39,14 @@ class PaymentController extends Controller
                     'quantity' => 1,
                 ]],
                 'mode' => 'payment',
-                'success_url' => route('payment.success') . '?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => route('payment.cancel'),
-                'metadata' => [
-                    'borrow_id' => $borrow->id,
-                    'user_id' => $borrow->user_id,
+                'payment_intent_data' => [
+                    'metadata' => [
+                        'borrow_id' => $borrow->id,
+                        'user_id' => $borrow->user_id,
+                    ],
                 ],
+                'success_url' => config('app.frontend_url') . '/payment-success?session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url' => config('app.frontend_url') . '/payment-cancel',
             ]);
 
             return response()->json(['id' => $session->id]);
@@ -58,6 +61,8 @@ class PaymentController extends Controller
         $sigHeader = $request->header('Stripe-Signature');
         $endpointSecret = config('services.stripe.webhook_secret');
 
+        // Log::info('Stripe Webhook Received', ['payload' => $payload]);
+
         try {
             $event = \Stripe\Webhook::constructEvent(
                 $payload,
@@ -65,34 +70,42 @@ class PaymentController extends Controller
                 $endpointSecret
             );
         } catch (\UnexpectedValueException $e) {
+            Log::error('Stripe Webhook Error: Invalid Payload', ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Invalid payload'], 400);
         } catch (\Stripe\Exception\SignatureVerificationException $e) {
+            Log::error('Stripe Webhook Error: Invalid Signature', ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Invalid signature'], 400);
         }
 
-        switch ($event->type) {
-            case 'checkout.session.completed':
-                $session = $event->data->object;
+        try {
+            switch ($event->type) {
+                case 'checkout.session.completed':
+                    $session = $event->data->object;
 
-                Payment::create([
-                    'user_id' => $session->metadata->user_id,
-                    'borrow_id' => $session->metadata->borrow_id,
-                    'amount' => $session->amount_total / 100,
-                    'stripe_payment_id' => $session->payment_intent,
-                    'status' => 'completed',
-                    'description' => 'Overdue fine payment',
-                ]);
+                    // Log::info('Checkout Session Completed', ['session' => $session]);
 
-                // Mark the borrow as fine paid
-                $borrow = Borrow::find($session->metadata->borrow_id);
-                if ($borrow) {
-                    $borrow->update(['fine_paid' => true]);
-                }
-                break;
+                    Payment::create([
+                        'user_id' => $session->metadata->user_id,
+                        'borrow_id' => $session->metadata->borrow_id,
+                        'amount' => $session->amount_total / 100,
+                        'stripe_payment_id' => $session->payment_intent,
+                        'status' => 'completed',
+                        'description' => 'Overdue fine payment',
+                    ]);
 
-            case 'payment_intent.succeeded':
-                // Handle other payment success cases if needed
-                break;
+                    $borrow = Borrow::find($session->metadata->borrow_id);
+                    if ($borrow) {
+                        $borrow->update(['fine_paid' => true]);
+                    }
+                    break;
+
+                case 'payment_intent.succeeded':
+                    Log::info('Payment Intent Succeeded', ['event' => $event]);
+                    break;
+            }
+        } catch (\Exception $e) {
+            Log::error('Stripe Webhook Processing Failed', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Webhook processing failed'], 500);
         }
 
         return response()->json(['success' => true]);

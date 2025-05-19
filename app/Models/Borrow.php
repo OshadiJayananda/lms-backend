@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -27,5 +28,28 @@ class Borrow extends Model
     public function book()
     {
         return $this->belongsTo(Book::class);
+    }
+
+    public function isOverdue(): bool
+    {
+        return $this->status === 'Issued' &&
+            $this->due_date &&
+            now()->greaterThan($this->due_date);
+    }
+
+    public function calculateFine(): float
+    {
+        if (!$this->isOverdue()) {
+            return 0.00;
+        }
+
+        $policy = BorrowingPolicy::currentPolicy();
+
+        $today = Carbon::today();
+
+        $dueDate = Carbon::parse($this->due_date)->startOfDay();
+        $daysOverdue = $dueDate->diffInDays($today, false);
+
+        return round($daysOverdue * $policy->fine_per_day, 2);
     }
 }
