@@ -52,9 +52,14 @@ class User extends Authenticatable
 
     public function overdueBooksCount()
     {
-        return $this->hasMany(\App\Models\Borrow::class)
-            ->whereIn('status', ['Issued', 'Confirmed', 'Overdue'])
-            ->whereDate('due_date', '<', now())
+        return $this->hasMany(Borrow::class)
+            ->whereIn('status', ['Issued', 'Confirmed', 'Overdue', 'Returned'])
+            ->whereNotNull('due_date')
+            ->where('fine_paid', false)
+            ->get()
+            ->filter(function ($borrow) {
+                return $borrow->isOverdue(); // uses Borrow model's method
+            })
             ->count();
     }
 }
