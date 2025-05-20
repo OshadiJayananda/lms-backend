@@ -62,6 +62,8 @@ class PaymentController extends Controller
 
     public function handleWebhook(Request $request)
     {
+        Stripe::setApiKey(config('services.stripe.secret'));
+
         $payload = $request->getContent();
         $sigHeader = $request->header('Stripe-Signature');
         $endpointSecret = config('services.stripe.webhook_secret');
@@ -88,7 +90,8 @@ class PaymentController extends Controller
                     $session = $event->data->object;
 
                     Log::info('Checkout Session Completed', ['session' => $session]);
-                    $paymentIntentId = $event->data->object->id;
+
+                    $paymentIntentId = $session->payment_intent;
 
                     $alreadyProcessed = Payment::where('stripe_payment_id', $paymentIntentId)->exists();
                     if ($alreadyProcessed) {
@@ -96,19 +99,32 @@ class PaymentController extends Controller
                         return response('OK', 200);
                     }
 
+                    $paymentIntent = \Stripe\PaymentIntent::retrieve($paymentIntentId);
+                    $userId = $paymentIntent->metadata->user_id ?? null;
+                    $borrowId = $paymentIntent->metadata->borrow_id ?? null;
+
+                    Log::info('Payment Intent Retrieved', [
+                        'paymentIntent' => $paymentIntent,
+                        'userId' => $userId,
+                        'borrowId' => $borrowId,
+                    ]);
+
                     Payment::create([
-                        'user_id' => $session->metadata->user_id,
-                        'borrow_id' => $session->metadata->borrow_id,
+                        'user_id' => $userId,
+                        'borrow_id' => $borrowId,
                         'amount' => $session->amount_total / 100,
-                        'stripe_payment_id' => $session->payment_intent,
+                        'stripe_payment_id' => $paymentIntentId,
                         'status' => 'completed',
                         'description' => 'Overdue fine payment',
                     ]);
 
-                    $borrow = Borrow::find($session->metadata->borrow_id);
-                    if ($borrow) {
-                        $borrow->update(['fine_paid' => true]);
+                    if ($borrowId) {
+                        $borrow = Borrow::find($borrowId);
+                        if ($borrow) {
+                            $borrow->update(['fine_paid' => true]);
+                        }
                     }
+
                     break;
 
                 case 'payment_intent.succeeded':
