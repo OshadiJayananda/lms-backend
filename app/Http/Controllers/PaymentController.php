@@ -169,7 +169,7 @@ class PaymentController extends Controller
     {
         $payments = Payment::with('borrow', 'borrow.book')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(10);
 
         return response()->json($payments);
     }
