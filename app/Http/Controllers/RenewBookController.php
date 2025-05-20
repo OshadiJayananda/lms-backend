@@ -93,7 +93,7 @@ class RenewBookController extends Controller
             ])
                 // ->where('status', 'pending')
                 ->orderBy('created_at', 'desc')
-                ->get();
+                ->paginate(10);
 
             return response()->json($requests);
         } catch (\Exception $e) {

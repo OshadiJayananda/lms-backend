@@ -14,11 +14,12 @@ class MemberController extends Controller
                 'borrowedBooks as total_borrowed',
                 'returnedBooks as total_returned',
             ])
-            ->get()
-            ->map(function ($user) {
-                $user->status = $user->overdueBooksCount() > 0 ? 'Blocked' : 'Active';
-                return $user;
-            });
+            ->paginate(10);
+
+        $members->getCollection()->transform(function ($user) {
+            $user->status = $user->overdueBooksCount() > 0 ? 'Blocked' : 'Active';
+            return $user;
+        });
 
         return response()->json($members);
     }

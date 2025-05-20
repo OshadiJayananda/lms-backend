@@ -108,7 +108,7 @@ class BorrowController extends Controller
 
     public function getPendingRequests()
     {
-        $pendingRequests = Borrow::with(['user', 'book'])->whereIn('status', ['Pending', 'Approved'])->get();
+        $pendingRequests = Borrow::with(['user', 'book'])->whereIn('status', ['Pending', 'Approved'])->paginate(10);
         return response()->json($pendingRequests);
     }
 
@@ -212,7 +212,7 @@ class BorrowController extends Controller
 
     public function getReturnedBooks()
     {
-        $returnedBooks = Borrow::with(['user', 'book'])->where('status', 'Returned')->get();
+        $returnedBooks = Borrow::with(['user', 'book'])->where('status', 'Returned')->paginate(10);
         return response()->json($returnedBooks);
     }
 

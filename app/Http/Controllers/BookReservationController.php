@@ -65,7 +65,7 @@ class BookReservationController extends Controller
     {
         $reservations = BookReservation::with(['user', 'book'])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(10);
 
         return response()->json($reservations);
     }
