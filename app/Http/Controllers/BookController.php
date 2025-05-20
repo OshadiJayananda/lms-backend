@@ -197,10 +197,7 @@ class BookController extends Controller
         $active_borrowed = $user->borrowedBooks()->where('status', 'Issued')->count();
         $borrowed = $user->borrowedBooks()->count();
         $returned = $user->borrowedBooks()->whereIn('status', ['Returned', 'Confirmed'])->count();
-        $overdue = $user->borrowedBooks()
-            ->where('status', 'Issued')
-            ->where('due_date', '<', now())
-            ->count();
+        $overdue = $user->overdueBooksCount();
 
         $borrowLimit = 5;
         $borrowDuration = '2 weeks';

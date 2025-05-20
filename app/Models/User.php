@@ -49,4 +49,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\Borrow::class)->whereIn('status', ['Confirmed', 'Returned']);
     }
+
+    public function overdueBooksCount()
+    {
+        return $this->hasMany(\App\Models\Borrow::class)
+            ->whereIn('status', ['Issued', 'Confirmed', 'Overdue'])
+            ->whereDate('due_date', '<', now())
+            ->count();
+    }
 }

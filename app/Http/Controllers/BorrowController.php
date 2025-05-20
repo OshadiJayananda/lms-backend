@@ -28,6 +28,25 @@ class BorrowController extends Controller
         $user = Auth::user();
         $book = Book::findOrFail($bookId);
 
+        // Check if the user has overdue books
+        if ($user->overdueBooksCount() > 0) {
+            return response()->json([
+                'message' => 'You have overdue books. Please return them before borrowing new ones.'
+            ], 400);
+        }
+
+        // Check if the user has reached the borrowing limit
+        $borrowingLimit = BorrowingPolicy::currentPolicy()->borrowing_limit ?? 5;
+        $borrowedCount = Borrow::where('user_id', $user->id)
+            ->whereIn('status', ['Pending', 'Issued'])
+            ->count();
+
+        if ($borrowedCount >= $borrowingLimit) {
+            return response()->json([
+                'message' => 'You have reached your borrowing limit'
+            ], 400);
+        }
+
         // Check if user already has a pending request for this book
         $existingRequest = Borrow::where('user_id', $user->id)
             ->where('book_id', $bookId)

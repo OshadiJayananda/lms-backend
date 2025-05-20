@@ -16,7 +16,7 @@ class MemberController extends Controller
             ])
             ->get()
             ->map(function ($user) {
-                $user->status = $user->borrowedBooks()->where('status', 'Expired')->count() > 3 ? 'Blocked' : 'Active';
+                $user->status = $user->overdueBooksCount() > 0 ? 'Blocked' : 'Active';
                 return $user;
             });
 
