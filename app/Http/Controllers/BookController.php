@@ -138,9 +138,7 @@ class BookController extends Controller
         $totalBooks = Book::count();
         $totalMembers = User::role('user')->count();
         $borrowedBooks = Borrow::where('status', 'Issued')->count();
-        $overdueBooks = Borrow::whereIn('status', ['Issued', 'Overdue'])
-            ->where('due_date', '<', Carbon::now())
-            ->count();
+        $overdueBooks = Borrow::overdueBooks()->count();
 
         // Books Borrowed Per Month (last 6 months)
         $borrowedPerMonth = Borrow::selectRaw('MONTH(issued_date) as month, COUNT(*) as count')

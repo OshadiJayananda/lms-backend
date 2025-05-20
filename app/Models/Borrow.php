@@ -91,4 +91,17 @@ class Borrow extends Model
 
         return round($daysOverdue * $policy->fine_per_day, 2);
     }
+
+    //overdueBooks scope
+    public function scopeOverdueBooks($query)
+    {
+        return $query->whereIn('status', ['Issued', 'Overdue', 'Confirmed', 'Returned'])
+            ->whereNotNull('due_date')
+            ->where('fine_paid', false)
+            ->get()
+            ->filter(function ($borrow) {
+                return $borrow->isOverdue();
+            })
+            ->values(); // Reset array keys
+    }
 }
