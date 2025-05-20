@@ -77,12 +77,31 @@ class BorrowController extends Controller
         }
     }
 
-    public function getBorrowedBooks()
+    public function getBorrowedBooks(Request $request)
     {
         $user = Auth::user();
-        $borrowedBooks = Borrow::with('book', 'book.author')
-            ->where('user_id', $user->id)
-            ->get();
+        $perPage = $request->input('per_page', 10);
+        $searchQuery = $request->input('search', '');
+        $status = $request->input('status', '');
+
+        $query = Borrow::with('book', 'book.author')
+            ->where('user_id', $user->id);
+
+        // Apply search filter
+        if ($searchQuery) {
+            $query->whereHas('book', function ($q) use ($searchQuery) {
+                $q->where('name', 'like', "%{$searchQuery}%")
+                    ->orWhere('id', 'like', "%{$searchQuery}%");
+            });
+        }
+
+        // Apply status filter
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $borrowedBooks = $query->orderBy('created_at', 'desc')
+            ->paginate($perPage);
 
         return response()->json($borrowedBooks);
     }
