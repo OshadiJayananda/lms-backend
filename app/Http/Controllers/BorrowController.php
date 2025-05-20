@@ -103,6 +103,15 @@ class BorrowController extends Controller
         $user = User::findOrFail($borrow->user_id);
         $book = Book::findOrFail($borrow->book_id);
 
+        Notification::create([
+            'user_id' => $borrow->user_id,
+            'book_id' => $borrow->book_id,
+            'title' => 'Book Request Approved',
+            'message' => "Your request for '{$book->name}' has been approved. You can now collect the book from the library.",
+            'type' => 'book_approved',
+            'is_read' => false
+        ]);
+
         Mail::to($user->email)->send(new BookApprovalMail($book, $borrow));
 
         return response()->json(['message' => 'Request approved successfully!']);
@@ -118,6 +127,15 @@ class BorrowController extends Controller
         $book = Book::findOrFail($borrow->book_id);
         $book->no_of_copies += 1;
         $book->save();
+
+        Notification::create([
+            'user_id' => $borrow->user_id,
+            'book_id' => $borrow->book_id,
+            'title' => 'Book Request Rejected',
+            'message' => "Your request for '{$book->name}' has been rejected. Try to borrow Book on next time",
+            'type' => 'book_rejected',
+            'is_read' => false
+        ]);
 
         return response()->json(['message' => 'Request rejected successfully!']);
     }
