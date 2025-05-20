@@ -164,4 +164,13 @@ class PaymentController extends Controller
 
         return response()->json($payments);
     }
+
+    public function getPaymentList()
+    {
+        $payments = Payment::with('borrow', 'borrow.book')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($payments);
+    }
 }

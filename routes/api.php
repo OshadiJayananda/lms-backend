@@ -67,6 +67,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin/dashboard-stats', [BookController::class, 'getDashboardStats']);
     Route::put('/borrowing-policies', [BorrowingPolicyController::class, 'update']);
     Route::delete('/borrowing-policies', [BorrowingPolicyController::class, 'destroy']);
+
+    Route::get('/admin/payments', [PaymentController::class, 'getPaymentList']);
 });
 
 // Authenticated Routes
