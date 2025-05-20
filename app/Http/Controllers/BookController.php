@@ -138,7 +138,7 @@ class BookController extends Controller
         $totalBooks = Book::count();
         $totalMembers = User::role('user')->count();
         $borrowedBooks = Borrow::where('status', 'Issued')->count();
-        $overdueBooks = Borrow::where('status', 'Issued')
+        $overdueBooks = Borrow::whereIn('status', ['Issued', 'Overdue'])
             ->where('due_date', '<', Carbon::now())
             ->count();
 

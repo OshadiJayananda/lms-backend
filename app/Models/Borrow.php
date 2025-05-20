@@ -22,6 +22,12 @@ class Borrow extends Model
 
     protected $appends = ['is_overdue', 'fine'];
 
+    protected $casts = [
+        'issued_date' => 'datetime',
+        'due_date' => 'datetime',
+        'returned_date' => 'datetime',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -44,9 +50,30 @@ class Borrow extends Model
 
     public function isOverdue(): bool
     {
-        return in_array($this->status, ['Issued', 'Confirmed', 'Overdue']) &&
-            $this->due_date &&
-            now()->greaterThan($this->due_date);
+        // Only apply logic for these statuses
+        if (!in_array($this->status, ['Issued', 'Overdue', 'Confirmed', 'Returned'])) {
+            return false;
+        }
+
+        if (!$this->due_date) {
+            return false;
+        }
+
+        if ($this->fine_paid) {
+            return false; // Already handled, not overdue anymore
+        }
+
+        // If not returned yet, and now is past due_date
+        if (!$this->returned_date && now()->greaterThan($this->due_date)) {
+            return true;
+        }
+
+        // If returned after due_date
+        if ($this->returned_date && $this->returned_date->greaterThan($this->due_date)) {
+            return true;
+        }
+
+        return false;
     }
 
     public function calculateFine(): float

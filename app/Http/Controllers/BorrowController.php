@@ -282,18 +282,22 @@ class BorrowController extends Controller
 
     public function getOverdueBooks()
     {
-        $overdueBooks = Borrow::with(['user', 'book'])
-            ->where('status', 'Issued')
-            ->where('due_date', '<', now())
+        $borrowRecords = Borrow::with(['user', 'book'])
+            ->where('user_id', auth()->id())
+            ->whereIn('status', ['Issued', 'Overdue', 'Confirmed', 'Returned'])
+            ->whereNotNull('due_date')
             ->where('fine_paid', false)
-            ->get()
-            ->map(function ($borrow) {
-                $borrow->is_overdue = true;
-                $borrow->fine_amount = $borrow->calculateFine();
-                return $borrow;
-            });
+            ->get();
 
-        return response()->json($overdueBooks);
+        $overdueBooks = $borrowRecords->filter(function ($borrow) {
+            return $borrow->isOverdue();
+        })->map(function ($borrow) {
+            $borrow->is_overdue = true;
+            $borrow->fine_amount = $borrow->calculateFine();
+            return $borrow;
+        });
+
+        return response()->json($overdueBooks->values());
     }
 
     public function markAsOverdue()
