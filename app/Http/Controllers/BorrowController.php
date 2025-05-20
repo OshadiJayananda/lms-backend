@@ -149,7 +149,7 @@ class BorrowController extends Controller
     {
         $borrow = Borrow::where('book_id', $bookId)
             ->where('user_id', auth()->id())
-            ->where('status', 'Issued')
+            ->whereIn('status', ['Issued', 'Overdue'])
             ->latest()
             ->firstOrFail();
 
