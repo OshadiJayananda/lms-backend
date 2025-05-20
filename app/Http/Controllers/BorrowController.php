@@ -63,7 +63,6 @@ class BorrowController extends Controller
         $user = Auth::user();
         $borrowedBooks = Borrow::with('book', 'book.author')
             ->where('user_id', $user->id)
-            ->whereIn('status', ['Issued', 'Renewed', 'Pending', 'Approved', 'Returned', 'Confirmed'])
             ->get();
 
         return response()->json($borrowedBooks);

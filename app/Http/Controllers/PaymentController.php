@@ -20,6 +20,10 @@ class PaymentController extends Controller
             return response()->json(['message' => 'This book is not overdue'], 400);
         }
 
+        if (!$borrow->returned_date) {
+            return response()->json(['message' => 'Please return the book first'], 400);
+        }
+
         $fineAmount = $borrow->calculateFine();
         $minimumLKR = 150; // about $0.50
         if ($fineAmount < $minimumLKR) {

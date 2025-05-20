@@ -20,6 +20,8 @@ class Borrow extends Model
         'fine_paid',
     ];
 
+    protected $appends = ['is_overdue', 'fine'];
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -30,9 +32,19 @@ class Borrow extends Model
         return $this->belongsTo(Book::class);
     }
 
+    public function getIsOverdueAttribute(): bool
+    {
+        return $this->isOverdue();
+    }
+
+    public function getFineAttribute(): float
+    {
+        return $this->calculateFine();
+    }
+
     public function isOverdue(): bool
     {
-        return $this->status === 'Issued' &&
+        return in_array($this->status, ['Issued', 'Confirmed', 'Overdue']) &&
             $this->due_date &&
             now()->greaterThan($this->due_date);
     }
