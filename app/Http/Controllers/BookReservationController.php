@@ -132,7 +132,7 @@ class BookReservationController extends Controller
             Notification::create([
                 'user_id' => $reservation->user_id,
                 'book_id' => $reservation->book_id,
-                'borrow_id' => $borrow->id,
+                // 'borrow_id' => $borrow->id,
                 'title' => 'Book Issued',
                 'message' => "Your book {$reservation->book->name} has been issued",
                 'type' => Notification::TYPE_BOOK_ISSUED,
@@ -144,7 +144,6 @@ class BookReservationController extends Controller
 
             return response()->json([
                 'message' => 'Book confirmed as given to user',
-                'borrow' => $borrow
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to confirm book given: ' . $e->getMessage());
@@ -216,17 +215,20 @@ class BookReservationController extends Controller
                 'is_read' => false
             ]);
 
-            // Create borrow record
+            // Create borrow record first
             $borrow = Borrow::create([
                 'user_id' => $reservation->user_id,
                 'book_id' => $reservation->book_id,
-                'status' => 'Pending'
+                'status' => 'Approved',
             ]);
 
             // Reduce book copies
             $reservation->book->decrement('no_of_copies');
 
-            return response()->json(['message' => 'Admin has been notified']);
+            return response()->json([
+                'message' => 'Admin has been notified',
+                'borrow' => $borrow
+            ]);
         } else {
             // User declines the reservation
             Notification::create([

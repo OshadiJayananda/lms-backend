@@ -143,6 +143,7 @@ class NotificationController extends Controller
                 $newDueDate = $renewRequest->admin_proposed_date ?? $renewRequest->requested_date;
 
                 if (!$newDueDate) {
+                    Log::info('No valid renewal date found');
                     throw new \Exception('No valid renewal date found');
                 }
 
