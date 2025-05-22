@@ -50,7 +50,7 @@ class BookController extends Controller
                     });
             });
         }
-        $books = $booksQuery->paginate(6);
+        $books = $booksQuery->get();
 
         return response()->json($books);
     }
