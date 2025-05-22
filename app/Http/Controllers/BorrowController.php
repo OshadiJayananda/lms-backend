@@ -196,12 +196,6 @@ class BorrowController extends Controller
             'returned_date' => now() // Add this line
         ]);
 
-        // Increment the book's available copies count
-        $book = Book::find($bookId);
-        if ($book) {
-            $book->increment('no_of_copies');
-        }
-
         return response()->json([
             'message' => 'Book returned successfully!',
             'data' => [

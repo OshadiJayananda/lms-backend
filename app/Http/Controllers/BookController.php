@@ -100,9 +100,6 @@ class BookController extends Controller
             $data['image'] = $request->file('image')->store('book_images', 'public');
         }
 
-        // Log the updated data
-        Log::info('Updated Book Data:', $data);
-
         // Update the book record
         $book->update($data);
 
