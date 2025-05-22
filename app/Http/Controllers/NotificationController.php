@@ -176,6 +176,20 @@ class NotificationController extends Controller
                 'is_read' => false
             ]);
 
+            Notification::create([
+                'user_id' => 1, // Assuming 1 is the admin user ID
+                'book_id' => $renewRequest->book_id,
+                'renew_request_id' => $renewRequest->id,
+                'title' => $validated['confirm'] ? 'Renewal Approved' : 'Renewal Rejected',
+                'message' => $validated['confirm']
+                    ? "{$renewRequest->user->name} renewal request for '{$renewRequest->book->name}' was approved. New due date: {$newDueDate}."
+                    : "{$renewRequest->user->name} renewal request for '{$renewRequest->book->name}' was rejected.",
+                'type' => $validated['confirm']
+                    ? Notification::TYPE_RENEWAL_CONFIRMED
+                    : Notification::TYPE_RENEWAL_DECLINED,
+                'is_read' => false
+            ]);
+
             $notification->update([
                 'is_read' => true,
                 'read_at' => now(),

@@ -145,6 +145,11 @@ class RenewBookController extends Controller
                 'approved_at' => now()
             ]);
 
+            // Update the borrow record with the new due date
+            $renewRequest->borrow->update([
+                'due_date' => $renewRequest->requested_date,
+            ]);
+
             // Notify user about the approval
             Notification::create([
                 'user_id' => $renewRequest->user_id,
