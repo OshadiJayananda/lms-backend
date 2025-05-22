@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Book;
 use App\Models\BookReservation;
 use App\Models\Borrow;
+use App\Models\BorrowingPolicy;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -90,15 +91,14 @@ class BookReservationController extends Controller
         $reservation->status = 'rejected';
         $reservation->save();
 
-        // Create notification for user
         Notification::create([
             'user_id' => $reservation->user_id,
             'book_id' => $reservation->book_id,
+            'reservation_id' => $reservation->id,
             'title' => 'Reservation Rejected',
             'message' => "Your reservation for {$reservation->book->name} has been rejected",
-            'type' => 'reservation_rejected',
-            'user_notified' => false,
-            'admin_notified' => true
+            'type' => Notification::TYPE_RESERVATION_REJECTED,
+            'is_read' => false
         ]);
 
         return response()->json(['message' => 'Reservation rejected']);
@@ -106,35 +106,53 @@ class BookReservationController extends Controller
 
     public function confirmBookGiven($reservationId)
     {
-        $reservation = BookReservation::findOrFail($reservationId);
+        try {
+            $reservation = BookReservation::with(['book', 'user'])->findOrFail($reservationId);
 
-        if ($reservation->status !== 'approved') {
+            if ($reservation->status !== 'approved') {
+                return response()->json([
+                    'message' => 'Reservation must be approved first'
+                ], 400);
+            }
+
+            // Get current borrowing policy
+            $policy = BorrowingPolicy::currentPolicy();
+            $borrowDuration = $policy->borrow_duration_days ?? 14;
+
+            // Create borrow record first
+            $borrow = Borrow::create([
+                'user_id' => $reservation->user_id,
+                'book_id' => $reservation->book_id,
+                'issued_date' => now(),
+                'due_date' => now()->addDays($borrowDuration),
+                'status' => 'Issued'
+            ]);
+
+            // Create notification
+            Notification::create([
+                'user_id' => $reservation->user_id,
+                'book_id' => $reservation->book_id,
+                'borrow_id' => $borrow->id,
+                'title' => 'Book Issued',
+                'message' => "Your book {$reservation->book->name} has been issued",
+                'type' => Notification::TYPE_BOOK_ISSUED,
+                'is_read' => false
+            ]);
+
+            // Delete the reservation
+            $reservation->delete();
+
             return response()->json([
-                'message' => 'Reservation must be approved first'
-            ], 400);
+                'message' => 'Book confirmed as given to user',
+                'borrow' => $borrow
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to confirm book given: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to confirm book issuance',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $reservation->status = 'completed';
-        $reservation->save();
-
-        // Reduce book copies
-        $reservation->book->decrement('no_of_copies');
-
-        // Create notification for user
-        Notification::create([
-            'user_id' => $reservation->user_id,
-            'book_id' => $reservation->book_id,
-            'reservation_id' => $reservation->id,
-            'title' => 'Book Ready for Pickup',  // Added title
-            'message' => "Your book {$reservation->book->name} is ready for pickup",
-            'type' => 'book_ready_for_pickup',  // Make sure this matches your enum
-            'is_read' => false
-        ]);
-
-        // Delete the reservation
-        $reservation->delete();
-
-        return response()->json(['message' => 'Book confirmed as given to user']);
     }
 
     public function approveReservation($reservationId)
@@ -150,7 +168,6 @@ class BookReservationController extends Controller
                 ], 400);
             }
 
-            // Update reservation status but don't create borrow record yet
             $reservation->status = 'approved';
             $reservation->save();
 
@@ -160,8 +177,8 @@ class BookReservationController extends Controller
                 'book_id' => $book->id,
                 'reservation_id' => $reservation->id,
                 'title' => 'Reservation Approved',
-                'message' => "Your reservation for {$book->name} has been approved. Do you still want this book?",
-                'type' => 'reservation_approved',
+                'message' => "Your reservation for {$book->name} has been approved. Please confirm if you still want this book.",
+                'type' => Notification::TYPE_RESERVATION_APPROVED,
                 'is_read' => false
             ]);
 
@@ -177,66 +194,6 @@ class BookReservationController extends Controller
         }
     }
 
-    public function respondToReservation(Request $request, $reservationId)
-    {
-        $request->validate([
-            'confirm' => 'required|boolean'
-        ]);
-
-        $reservation = BookReservation::findOrFail($reservationId);
-        $book = Book::findOrFail($reservation->book_id);
-
-        if ($request->confirm) {
-            // User confirms they want the book
-            if ($book->no_of_copies > 0) {
-                // Create borrow record
-                $borrow = Borrow::create([
-                    'user_id' => $reservation->user_id,
-                    'book_id' => $reservation->book_id,
-                    'issued_date' => now(),
-                    'due_date' => now()->addWeeks(2),
-                    'status' => 'Issued'
-                ]);
-
-                // Reduce book copies
-                $book->decrement('no_of_copies');
-
-                // Notify admin
-                Notification::create([
-                    'user_id' => 1, // Admin ID
-                    'book_id' => $book->id,
-                    'reservation_id' => $reservation->id,
-                    'title' => 'Reservation Confirmed',
-                    'message' => "User has confirmed reservation for {$book->name}",
-                    'type' => 'reservation_confirmed',
-                    'is_read' => false
-                ]);
-
-                // Delete reservation
-                $reservation->delete();
-
-                return response()->json(['message' => 'Book issued successfully']);
-            } else {
-                return response()->json(['message' => 'No copies available'], 400);
-            }
-        } else {
-            // User declines the reservation
-            Notification::create([
-                'user_id' => 1, // Admin ID
-                'book_id' => $book->id,
-                'reservation_id' => $reservation->id,
-                'title' => 'Reservation Declined',
-                'message' => "User has declined reservation for {$book->name}",
-                'type' => 'reservation_declined',
-                'is_read' => false
-            ]);
-
-            // Delete reservation
-            $reservation->delete();
-
-            return response()->json(['message' => 'Reservation cancelled']);
-        }
-    }
     public function handleReservationResponse(Request $request, $reservationId)
     {
         $request->validate([
@@ -255,9 +212,19 @@ class BookReservationController extends Controller
                 'reservation_id' => $reservation->id,
                 'title' => 'Reservation Confirmed',
                 'message' => "User {$user->name} has confirmed reservation for {$book->name}",
-                'type' => 'reservation_confirmed', // Matches enum
+                'type' => Notification::TYPE_BOOK_READY,
                 'is_read' => false
             ]);
+
+            // Create borrow record
+            $borrow = Borrow::create([
+                'user_id' => $reservation->user_id,
+                'book_id' => $reservation->book_id,
+                'status' => 'Pending'
+            ]);
+
+            // Reduce book copies
+            $reservation->book->decrement('no_of_copies');
 
             return response()->json(['message' => 'Admin has been notified']);
         } else {
@@ -268,14 +235,13 @@ class BookReservationController extends Controller
                 'reservation_id' => $reservation->id,
                 'title' => 'Reservation Declined',
                 'message' => "User {$user->name} has declined reservation for {$book->name}",
-                'type' => 'reservation_rejected', // Changed to match enum
+                'type' => Notification::TYPE_RESERVATION_REJECTED,
                 'is_read' => false
             ]);
 
-            // Delete reservation
             $reservation->delete();
 
-            // Check if there are other pending reservations
+            // Check for pending reservations
             $pendingReservations = BookReservation::where('book_id', $book->id)
                 ->where('status', 'pending')
                 ->exists();
@@ -286,7 +252,7 @@ class BookReservationController extends Controller
                     'book_id' => $book->id,
                     'title' => 'Pending Reservations',
                     'message' => "There are pending reservations for {$book->name}",
-                    'type' => 'admin_alert',
+                    'type' => Notification::TYPE_ADMIN_ALERT,
                     'is_read' => false
                 ]);
             }
@@ -294,4 +260,55 @@ class BookReservationController extends Controller
             return response()->json(['message' => 'Reservation cancelled']);
         }
     }
+
+    public function getPendingReservations($bookId)
+    {
+        try {
+            $pendingReservations = BookReservation::where('book_id', $bookId)
+                ->where('status', 'pending')
+                ->count();
+
+            return response()->json([
+                'count' => $pendingReservations,
+                'message' => $pendingReservations > 0
+                    ? 'There are pending reservations for this book'
+                    : 'No pending reservations for this book'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch pending reservations: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to fetch pending reservations',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    // public function createBorrowFromReservation($reservationId)
+    // {
+    //     $reservation = BookReservation::with('book', 'user')->findOrFail($reservationId);
+    //     $book = $reservation->book;
+    //     $user = $reservation->user;
+
+    //     if ($book->no_of_copies <= 0) {
+    //         return response()->json([
+    //             'message' => 'No copies available'
+    //         ], 400);
+    //     }
+
+    //     // Create borrow record
+    //     $borrow = Borrow::create([
+    //         'user_id' => $user->id,
+    //         'book_id' => $book->id,
+    //         // 'issued_date' => now(),
+    //         // 'due_date' => now()->addWeeks(2),
+    //         'status' => 'Issued'
+    //     ]);
+
+    //     // Reduce book copies
+    //     $book->decrement('no_of_copies');
+
+    //     return response()->json([
+    //         'message' => 'Borrow record created',
+    //         'borrow' => $borrow
+    //     ]);
+    // }
 }

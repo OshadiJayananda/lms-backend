@@ -58,7 +58,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     // Route::get('/admin/notifications', [NotificationController::class, 'getNotifications']);
     Route::post('/admin/book-reservations/{reservationId}/confirm-given', [BookReservationController::class, 'confirmBookGiven']);
     Route::get('/admin/notifications', [NotificationController::class, 'index']);
-    Route::post('/admin/book-reservations/{reservation}/create-borrow', [BorrowController::class, 'createBorrowFromReservation']);
+    // Route::post('/admin/book-reservations/{reservation}/create-borrow', [BorrowController::class, 'createBorrowFromReservation']);
     Route::post('/admin/renew-requests/{requestId}/confirm', [RenewBookController::class, 'confirmRenewalDate']);
     Route::post('authors', [AuthorController::class, 'store']);
     Route::put('authors/{author}', [AuthorController::class, 'update']);
@@ -67,7 +67,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin/dashboard-stats', [BookController::class, 'getDashboardStats']);
     Route::put('/borrowing-policies', [BorrowingPolicyController::class, 'update']);
     Route::delete('/borrowing-policies', [BorrowingPolicyController::class, 'destroy']);
-
+    Route::get('/admin/book-reservations/pending/{bookId}', [BookReservationController::class, 'getPendingReservations']);
     Route::get('/admin/payments', [PaymentController::class, 'getPaymentList']);
 });
 
@@ -120,12 +120,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/borrowed-books/{bookId}/notify-admin', [RenewBookController::class, 'notifyAdmin']);
     Route::post('/books/{bookId}/reserve', [BookReservationController::class, 'reserveBook']);
     Route::get('/book-reservations', [BookReservationController::class, 'getUserReservationList']);
-    Route::post('/reservations/{reservation}/respond', [BookReservationController::class, 'handleReservationResponse']);
+    Route::post('/book-reservations/{reservation}/response', [BookReservationController::class, 'handleReservationResponse']);
 
     Route::post('/notifications/create', [NotificationController::class, 'create']);
     Route::post('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-    Route::post('/reservations/{reservationId}/respond', [BookReservationController::class, 'respondToReservation']);
+    // Route::post('/reservations/{reservationId}/respond', [BookReservationController::class, 'respondToReservation']);
     Route::get('/user/notifications', [NotificationController::class, 'userNotifications']);
     Route::post('/renew-requests/{requestId}/confirm', [RenewBookController::class, 'confirmRenewalDate']);
     Route::post(
