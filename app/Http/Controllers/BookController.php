@@ -25,6 +25,7 @@ class BookController extends Controller
         $query = $request->query('q');
         $categoryId = $request->query('category');
         $categoryId = (int)$categoryId;
+        $perPage = $request->query('per_page', 10); // Default to 10 items per page
 
         $booksQuery = Book::with('author');
 
@@ -50,7 +51,8 @@ class BookController extends Controller
                     });
             });
         }
-        $books = $booksQuery->get();
+
+        $books = $booksQuery->paginate($perPage);
 
         return response()->json($books);
     }
