@@ -167,7 +167,7 @@ class PaymentController extends Controller
 
     public function getPaymentList()
     {
-        $payments = Payment::with('borrow', 'borrow.book')
+        $payments = Payment::with('borrow', 'borrow.book', 'borrow.user')
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
