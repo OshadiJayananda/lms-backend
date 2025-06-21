@@ -59,6 +59,18 @@
             display: inline-block;
             margin-right: 20px;
         }
+
+        .status-issued {
+            color: #3b82f6;
+        }
+
+        .status-returned {
+            color: #10b981;
+        }
+
+        .status-overdue {
+            color: #ef4444;
+        }
     </style>
 </head>
 
@@ -73,34 +85,39 @@
     </div>
 
     <div class="summary">
-        <div class="summary-item"><strong>Total Books:</strong> {{ $books->count() }}</div><br />
-        <div class="summary-item">
-            <strong>Available Books:</strong> {{ $books->where('no_of_copies', '>', 0)->count() }}
+        <div class="summary-item"><strong>Total Borrowings:</strong> {{ $borrowings->count() }}</div><br />
+        <div class="summary-item"><strong>Issued:</strong> {{ $borrowings->where('status', 'Issued')->count() }}</div>
+        <br />
+        <div class="summary-item"><strong>Returned But Not Given:</strong>
+            {{ $borrowings->where('status', 'Returned')->count() }}
         </div><br />
-        {{-- <div class="summary-item"><strong>Borrowed Books:</strong> {{ $borrows->where('status', 'Issued')->count() }}
-        </div> --}}
+        <div class="summary-item"><strong>Returned And Given:</strong>
+            {{ $borrowings->where('status', 'Confirmed')->count() }}
+        </div><br />
     </div>
 
     <table>
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Title</th>
-                <th>Author</th>
-                <th>ISBN</th>
-                <th>Category</th>
-                <th>Total Borrows</th>
+                <th>Book</th>
+                <th>Member</th>
+                <th>Issued Date</th>
+                <th>Due Date</th>
+                <th>Return Date</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody>
-            @foreach ($books as $book)
+            @foreach ($borrowings as $borrowing)
                 <tr>
-                    <td>{{ $book->id }}</td>
-                    <td>{{ $book->name }}</td>
-                    <td>{{ $book->author->name ?? 'N/A' }}</td>
-                    <td>{{ $book->isbn }}</td>
-                    <td>{{ $book->category->name ?? 'N/A' }}</td>
-                    <td>{{ $book->borrows_count }}</td>
+                    <td>{{ $borrowing->id }}</td>
+                    <td>{{ $borrowing->book->name }}</td>
+                    <td>{{ $borrowing->user->name }}</td>
+                    <td>{{ $borrowing->issued_date->format('Y-m-d') }}</td>
+                    <td>{{ $borrowing->due_date->format('Y-m-d') }}</td>
+                    <td>{{ $borrowing->returned_date ? $borrowing->returned_date->format('Y-m-d') : 'N/A' }}</td>
+                    <td class="status-{{ strtolower($borrowing->status) }}">{{ $borrowing->status }}</td>
                 </tr>
             @endforeach
         </tbody>

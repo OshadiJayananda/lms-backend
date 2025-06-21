@@ -31,7 +31,7 @@
         th,
         td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 3px;
             text-align: left;
         }
 
@@ -73,34 +73,41 @@
     </div>
 
     <div class="summary">
-        <div class="summary-item"><strong>Total Books:</strong> {{ $books->count() }}</div><br />
-        <div class="summary-item">
-            <strong>Available Books:</strong> {{ $books->where('no_of_copies', '>', 0)->count() }}
+        <div class="summary-item"><strong>Total Members:</strong> {{ $members->count() }}</div><br />
+        <div class="summary-item"><strong>Active Members:</strong> {{ $members->where('status', 'Active')->count() }}
         </div><br />
-        {{-- <div class="summary-item"><strong>Borrowed Books:</strong> {{ $borrows->where('status', 'Issued')->count() }}
-        </div> --}}
+        <div class="summary-item"><strong>Blocked Members:</strong> {{ $members->where('status', 'Blocked')->count() }}
+        </div><br />
+        <div class="summary-item"><strong>Avg. Books Borrowed:</strong>
+            {{ number_format($members->avg('borrowed_books_count'), 2) }}</div><br />
+        <div class="summary-item"><strong>Avg. Books Returned:</strong>
+            {{ number_format($members->avg('returned_books_count'), 2) }}</div><br />
     </div>
 
     <table>
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Title</th>
-                <th>Author</th>
-                <th>ISBN</th>
-                <th>Category</th>
-                <th>Total Borrows</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Total Borrowed</th>
+                <th>Total Returned</th>
+                <th>Status</th>
+                <th>Member Since</th>
             </tr>
         </thead>
         <tbody>
-            @foreach ($books as $book)
+            @foreach ($members as $member)
                 <tr>
-                    <td>{{ $book->id }}</td>
-                    <td>{{ $book->name }}</td>
-                    <td>{{ $book->author->name ?? 'N/A' }}</td>
-                    <td>{{ $book->isbn }}</td>
-                    <td>{{ $book->category->name ?? 'N/A' }}</td>
-                    <td>{{ $book->borrows_count }}</td>
+                    <td>{{ $member->id }}</td>
+                    <td>{{ $member->name }}</td>
+                    <td>{{ $member->email }}</td>
+                    <td>{{ $member->contact ?? 'N/A' }}</td>
+                    <td>{{ $member->borrowed_books_count }}</td>
+                    <td>{{ $member->returned_books_count }}</td>
+                    <td>{{ $member->status }}</td>
+                    <td>{{ $member->created_at->format('Y-m-d') }}</td>
                 </tr>
             @endforeach
         </tbody>
