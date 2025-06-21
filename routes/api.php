@@ -13,6 +13,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RenewBookController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -69,6 +70,16 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::delete('/borrowing-policies', [BorrowingPolicyController::class, 'destroy']);
     Route::get('/admin/book-reservations/pending/{bookId}', [BookReservationController::class, 'getPendingReservations']);
     Route::get('/admin/payments', [PaymentController::class, 'getPaymentList']);
+
+    // Report Routes
+    Route::prefix('admin/reports')->group(function () {
+        Route::get('/{type}', [ReportController::class, 'generateReport'])
+            ->name('admin.reports.generate')
+            ->where('type', 'books|members|borrowings|overdue');
+
+        // Optional: Additional report endpoints
+        Route::post('/custom', [ReportController::class, 'generateCustomReport']);
+    });
 });
 
 // Authenticated Routes
