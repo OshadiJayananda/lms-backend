@@ -5,21 +5,19 @@ namespace App\Http\Controllers;
 use App\Http\Requests\BookRequest;
 use App\Http\Requests\UpdateBookRequest;
 use App\Models\Book;
-use App\Models\BookReservation;
 use App\Models\Borrow;
 use App\Models\Category;
-use App\Models\Notification;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+// use Illuminate\Support\Facades\Log;
+// use Carbon\Carbon;
+// use App\Models\Notification;
+// use App\Models\BookReservation;
 
 class BookController extends Controller
 {
-    /**
-     * Display a listing of books.
-     */
+
     public function index(Request $request)
     {
         $query = $request->query('q');
@@ -57,9 +55,6 @@ class BookController extends Controller
         return response()->json($books);
     }
 
-    /**
-     * Store a newly created book.
-     */
     public function store(BookRequest $request)
     {
         $data = $request->validated();
@@ -74,9 +69,6 @@ class BookController extends Controller
         return response()->json(['message' => 'Book created successfully!', 'book' => $book], 201);
     }
 
-    /**
-     * Display the specified book.
-     */
     public function show(Book $book)
     {
         $book->load('author');
@@ -84,15 +76,10 @@ class BookController extends Controller
         return response()->json($book);
     }
 
-    /**
-     * Update the specified book.
-     */
     public function update(UpdateBookRequest $request, Book $book)
     {
-        // Validate the request data
         $data = $request->validated();
 
-        // Handle Image Upload
         if ($request->hasFile('image')) {
             // Delete the old image if it exists
             if ($book->image) {
@@ -108,27 +95,18 @@ class BookController extends Controller
         // Return success response
         return response()->json(['message' => 'Book updated successfully!', 'book' => $book]);
     }
-    /**
-     * Remove the specified book.
-     */
+
     public function destroy(Book $book)
     {
         $book->delete();
         return response()->json(['message' => 'Book deleted successfully!']);
     }
 
-    /**
-     * Check if the ISBN is unique.
-     */
     public function checkIsbn(Request $request)
     {
-        // Get the ISBN from the request query
         $isbn = $request->query('isbn');
-
-        // Check if the ISBN exists in the database
         $exists = Book::where('isbn', $isbn)->exists();
 
-        // Return a JSON response indicating whether the ISBN exists
         return response()->json(['exists' => $exists]);
     }
 

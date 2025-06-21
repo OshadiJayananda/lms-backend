@@ -115,11 +115,9 @@ class BookReservationController extends Controller
                 ], 400);
             }
 
-            // Get current borrowing policy
             $policy = BorrowingPolicy::currentPolicy();
             $borrowDuration = $policy->borrow_duration_days ?? 14;
 
-            // Create borrow record first
             $borrow = Borrow::create([
                 'user_id' => $reservation->user_id,
                 'book_id' => $reservation->book_id,
@@ -128,11 +126,9 @@ class BookReservationController extends Controller
                 'status' => 'Issued'
             ]);
 
-            // Create notification
             Notification::create([
                 'user_id' => $reservation->user_id,
                 'book_id' => $reservation->book_id,
-                // 'borrow_id' => $borrow->id,
                 'title' => 'Book Issued',
                 'message' => "Your book {$reservation->book->name} has been issued",
                 'type' => Notification::TYPE_BOOK_ISSUED,
@@ -170,7 +166,6 @@ class BookReservationController extends Controller
             $reservation->status = 'approved';
             $reservation->save();
 
-            // Create notification for user to confirm
             Notification::create([
                 'user_id' => $user->id,
                 'book_id' => $book->id,
@@ -206,7 +201,7 @@ class BookReservationController extends Controller
         if ($request->confirm) {
             // User confirms they want the book
             Notification::create([
-                'user_id' => 1, // Admin ID
+                'user_id' => 1,
                 'book_id' => $book->id,
                 'reservation_id' => $reservation->id,
                 'title' => 'Reservation Confirmed',
@@ -215,14 +210,12 @@ class BookReservationController extends Controller
                 'is_read' => false
             ]);
 
-            // Create borrow record first
             $borrow = Borrow::create([
                 'user_id' => $reservation->user_id,
                 'book_id' => $reservation->book_id,
                 'status' => 'Approved',
             ]);
 
-            // Reduce book copies
             $reservation->book->decrement('no_of_copies');
 
             return response()->json([
@@ -230,9 +223,8 @@ class BookReservationController extends Controller
                 'borrow' => $borrow
             ]);
         } else {
-            // User declines the reservation
             Notification::create([
-                'user_id' => 1, // Admin ID
+                'user_id' => 1,
                 'book_id' => $book->id,
                 'reservation_id' => $reservation->id,
                 'title' => 'Reservation Declined',
@@ -284,33 +276,4 @@ class BookReservationController extends Controller
             ], 500);
         }
     }
-    // public function createBorrowFromReservation($reservationId)
-    // {
-    //     $reservation = BookReservation::with('book', 'user')->findOrFail($reservationId);
-    //     $book = $reservation->book;
-    //     $user = $reservation->user;
-
-    //     if ($book->no_of_copies <= 0) {
-    //         return response()->json([
-    //             'message' => 'No copies available'
-    //         ], 400);
-    //     }
-
-    //     // Create borrow record
-    //     $borrow = Borrow::create([
-    //         'user_id' => $user->id,
-    //         'book_id' => $book->id,
-    //         // 'issued_date' => now(),
-    //         // 'due_date' => now()->addWeeks(2),
-    //         'status' => 'Issued'
-    //     ]);
-
-    //     // Reduce book copies
-    //     $book->decrement('no_of_copies');
-
-    //     return response()->json([
-    //         'message' => 'Borrow record created',
-    //         'borrow' => $borrow
-    //     ]);
-    // }
 }
