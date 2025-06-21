@@ -66,8 +66,6 @@ class BorrowController extends Controller
             Borrow::create([
                 'user_id' => $user->id,
                 'book_id' => $bookId,
-                // 'issued_date' => now(),
-                // 'due_date' => now()->addDays(30),
                 'status' => 'Pending',
             ]);
 
