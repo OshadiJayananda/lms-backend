@@ -107,4 +107,8 @@ class Borrow extends Model
                 ->whereColumn('returned_date', '>', 'due_date');
         });
     }
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
 }

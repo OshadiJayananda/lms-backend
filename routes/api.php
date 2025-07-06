@@ -80,6 +80,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
         // Optional: Additional report endpoints
         Route::post('/custom', [ReportController::class, 'generateCustomReport']);
     });
+
+    Route::get('/admin/reports/overdue', [ReportController::class, 'generateOverdueReport']);
 });
 
 // Authenticated Routes
@@ -122,7 +124,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // getOverdueBooks
     Route::get('/borrows/overdue', [BorrowController::class, 'getOverdueBooks']);
-    Route::get('/overdue-books', [BorrowController::class, 'getOverdueBooks']);
+
+
     // Book availability check
     // Route::get('/books/{bookId}/availability', [BorrowController::class, 'checkBookAvailability']);
 

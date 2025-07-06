@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Book;
 use App\Models\Borrow;
+use App\Models\BorrowingPolicy;
 use App\Models\User;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -139,5 +140,101 @@ class ReportController extends Controller
 
         $pdf = Pdf::loadView('reports.' . $type, $data);
         return $pdf->download($title . ' - ' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    // app/Http/Controllers/ReportController.php
+
+    public function generateOverdueReport()
+    {
+        try {
+            // Validate request
+            request()->validate([
+                'from_date' => 'nullable|date',
+                'to_date' => 'nullable|date|after_or_equal:from_date'
+            ]);
+
+            // Get dates with proper fallbacks
+            $fromDate = request('from_date')
+                ? Carbon::parse(request('from_date'))->startOfDay()
+                : Carbon::now()->subYear()->startOfDay();
+
+            $toDate = request('to_date')
+                ? Carbon::parse(request('to_date'))->endOfDay()
+                : Carbon::now()->endOfDay();
+
+            // Get current policy or defaults
+            $policy = BorrowingPolicy::currentPolicy() ?? new BorrowingPolicy([
+                'fine_per_day' => 50
+            ]);
+
+            // Query with proper relationships
+            $overdueBooks = Borrow::with([
+                'user:id,name,email',
+                'book:id,name,isbn,author',
+                'payments' => function ($query) {
+                    $query->select(['id', 'borrow_id', 'amount', 'status'])
+                        ->where('status', 'completed');
+                }
+            ])
+                ->where(function ($query) {
+                    $query->whereIn('status', ['Issued', 'Overdue'])
+                        ->where('due_date', '<', now())
+                        ->where('fine_paid', false)
+                        ->whereNull('returned_date');
+                })
+                ->orWhere(function ($query) {
+                    $query->whereIn('status', ['Returned', 'Confirmed'])
+                        ->where('fine_paid', false)
+                        ->whereNotNull('returned_date')
+                        ->whereColumn('returned_date', '>', 'due_date');
+                })
+                ->whereBetween('issued_date', [$fromDate, $toDate])
+                ->get()
+                ->map(function ($borrow) use ($policy) {
+                    $daysOverdue = max(0, Carbon::parse($borrow->due_date)->diffInDays(now(), false));
+                    $calculatedFine = $daysOverdue * $policy->fine_per_day;
+                    $paidAmount = $borrow->payments->sum('amount');
+
+                    return [
+                        'id' => $borrow->id,
+                        'book' => $borrow->book,
+                        'user' => $borrow->user,
+                        'issued_date' => $borrow->issued_date->format('Y-m-d'),
+                        'due_date' => $borrow->due_date->format('Y-m-d'),
+                        'days_overdue' => $daysOverdue,
+                        'fine_per_day' => $policy->fine_per_day,
+                        'calculated_fine' => $calculatedFine,
+                        'paid_amount' => $paidAmount,
+                        'remaining_fine' => max(0, $calculatedFine - $paidAmount),
+                        'status' => $borrow->status,
+                    ];
+                });
+
+            $data = [
+                'overdueBooks' => $overdueBooks,
+                'totalOverdue' => $overdueBooks->count(),
+                'totalFine' => $overdueBooks->sum('calculated_fine'),
+                'totalPaid' => $overdueBooks->sum('paid_amount'),
+                'totalRemaining' => $overdueBooks->sum('remaining_fine'),
+                'fromDate' => $fromDate->format('Y-m-d'),
+                'toDate' => $toDate->format('Y-m-d'),
+                'title' => 'Overdue Books Report',
+                'generatedAt' => now()->format('Y-m-d H:i:s'),
+                'policy' => $policy
+            ];
+
+            // Generate PDF
+            $pdf = Pdf::loadView('reports.overdue', $data);
+            return $pdf->download('Overdue-Books-Report-' . now()->format('Y-m-d') . '.pdf');
+        } catch (\Exception $e) {
+            \Log::error('Overdue report error: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+
+            return response()->json([
+                'error' => 'Report generation failed',
+                'message' => $e->getMessage(),
+                'trace' => config('app.debug') ? $e->getTrace() : null
+            ], 500);
+        }
     }
 }
