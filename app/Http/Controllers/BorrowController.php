@@ -341,4 +341,20 @@ class BorrowController extends Controller
             'timestamp' => now()
         ];
     }
+    public function destroy($id)
+    {
+        $borrow = Borrow::findOrFail($id);
+
+        // If the book was issued but not returned, increment the book copies
+        if (in_array($borrow->status, ['Issued', 'Overdue'])) {
+            $book = Book::find($borrow->book_id);
+            if ($book) {
+                $book->increment('no_of_copies');
+            }
+        }
+
+        $borrow->delete();
+
+        return response()->json(['message' => 'Borrow record deleted successfully']);
+    }
 }
