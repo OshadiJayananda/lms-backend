@@ -93,15 +93,18 @@ class Borrow extends Model
     }
 
     //overdueBooks scope
-    public function scopeOverdueBooks($query)
+    public function scopeOverdue($query)
     {
-        return $query->whereIn('status', ['Issued', 'Overdue', 'Confirmed', 'Returned'])
-            ->whereNotNull('due_date')
-            ->where('fine_paid', false)
-            ->get()
-            ->filter(function ($borrow) {
-                return $borrow->isOverdue();
-            })
-            ->values(); // Reset array keys
+        return $query->where(function ($q) {
+            $q->whereIn('status', ['Issued', 'Overdue'])
+                ->where('due_date', '<', now())
+                ->where('fine_paid', false)
+                ->whereNull('returned_date');
+        })->orWhere(function ($q) {
+            $q->whereIn('status', ['Returned', 'Confirmed'])
+                ->where('fine_paid', false)
+                ->whereNotNull('returned_date')
+                ->whereColumn('returned_date', '>', 'due_date');
+        });
     }
 }

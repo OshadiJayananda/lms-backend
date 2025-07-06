@@ -6,6 +6,7 @@ use App\Http\Requests\BookRequest;
 use App\Http\Requests\UpdateBookRequest;
 use App\Models\Book;
 use App\Models\Borrow;
+use App\Models\BorrowingPolicy;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -115,7 +116,7 @@ class BookController extends Controller
         $totalBooks = Book::count();
         $totalMembers = User::role('user')->count();
         $borrowedBooks = Borrow::where('status', 'Issued')->count();
-        $overdueBooks = Borrow::overdueBooks()->count();
+        $overdueBooks = Borrow::overdue()->count();
 
         // Books Borrowed Per Month (last 6 months)
         $borrowedPerMonth = Borrow::selectRaw('MONTH(issued_date) as month, COUNT(*) as count')
@@ -172,11 +173,44 @@ class BookController extends Controller
         $active_borrowed = $user->borrowedBooks()->where('status', 'Issued')->count();
         $borrowed = $user->borrowedBooks()->count();
         $returned = $user->borrowedBooks()->whereIn('status', ['Returned', 'Confirmed'])->count();
-        $overdue = $user->overdueBooksCount();
 
-        $borrowLimit = 5;
-        $borrowDuration = '2 weeks';
-        $finePerDay = 50;
+        // Use the same logic as in the Borrow model
+        $overdue = $user->borrowedBooks()
+            ->whereIn('status', ['Issued', 'Overdue', 'Confirmed', 'Returned'])
+            ->whereNotNull('due_date')
+            ->where('fine_paid', false)
+            ->get()
+            ->filter(function ($borrow) {
+                if (!in_array($borrow->status, ['Issued', 'Overdue', 'Confirmed', 'Returned'])) {
+                    return false;
+                }
+
+                if (!$borrow->due_date) {
+                    return false;
+                }
+
+                if ($borrow->fine_paid) {
+                    return false;
+                }
+
+                // If not returned yet, and now is past due_date
+                if (!$borrow->returned_date && now()->greaterThan($borrow->due_date)) {
+                    return true;
+                }
+
+                // If returned after due_date
+                if ($borrow->returned_date && $borrow->returned_date->greaterThan($borrow->due_date)) {
+                    return true;
+                }
+
+                return false;
+            })->count();
+
+        // Get current borrowing policy for dynamic values
+        $policy = BorrowingPolicy::currentPolicy();
+        $borrowLimit = $policy->borrowing_limit ?? 5;
+        $borrowDuration = ($policy->borrow_duration_days ?? 14) . ' days';
+        $finePerDay = $policy->fine_per_day ?? 50;
 
         $latestBooks = Book::latest()->take(5)->select('id', 'name', 'image')->get();
 
@@ -195,12 +229,11 @@ class BookController extends Controller
             $monthlyStats[] = [
                 'month' => $monthName,
                 'borrowed' => $user->borrowedBooks()
-                    // ->where('status', 'Issued')
                     ->whereMonth('issued_date', $date->month)
                     ->whereYear('issued_date', $date->year)
                     ->count(),
-                'returned' => $user->returnedBooks()
-                    // ->where('status', 'Returned')
+                'returned' => $user->borrowedBooks()
+                    ->whereIn('status', ['Returned', 'Confirmed'])
                     ->whereMonth('returned_date', $date->month)
                     ->whereYear('returned_date', $date->year)
                     ->count(),
