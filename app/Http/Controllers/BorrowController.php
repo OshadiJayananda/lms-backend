@@ -341,43 +341,4 @@ class BorrowController extends Controller
             'timestamp' => now()
         ];
     }
-    // public function checkBookAvailability($bookId)
-    // {
-    //     $book = Book::findOrFail($bookId);
-    //     return response()->json([
-    //         'available' => $book->no_of_copies > 0,
-    //         'copies_available' => $book->no_of_copies
-    //     ]);
-    // }
-
-
-    // public function checkAvailabilityNotifications()
-    // {
-    //     $notifications = BookAvailabilityNotification::with(['user', 'book'])
-    //         ->where('notified', false)
-    //         ->get();
-
-    //     return response()->json($notifications);
-    // }
-
-    // public function notifyAvailableBooks($bookId)
-    // {
-    //     $book = Book::findOrFail($bookId);
-    //     $notifications = BookAvailabilityNotification::with('user')
-    //         ->where('book_id', $bookId)
-    //         ->where('notified', false)
-    //         ->get();
-
-    //     foreach ($notifications as $notification) {
-    //         Mail::to($notification->user->email)
-    //             ->send(new BookAvailableNotification($book, $notification->requested_date));
-
-    //         $notification->notified = true;
-    //         $notification->save();
-    //     }
-
-    //     return response()->json(['message' => 'Users notified about book availability']);
-    // }
-
-
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -103,7 +104,13 @@ class NotificationController extends Controller
     public function userNotifications()
     {
         try {
-            $notifications = Notification::where('user_id', auth()->id())
+            $notifications = Notification::where(function ($query) {
+                $query->where('user_id', auth()->id());
+
+                if (auth()->user()->hasRole('admin')) {
+                    $query->orWhere('type', 'admin_alert');
+                }
+            })
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -176,19 +183,22 @@ class NotificationController extends Controller
                 'is_read' => false
             ]);
 
-            Notification::create([
-                'user_id' => 1, // Assuming 1 is the admin user ID
-                'book_id' => $renewRequest->book_id,
-                'renew_request_id' => $renewRequest->id,
-                'title' => $validated['confirm'] ? 'Renewal Approved' : 'Renewal Rejected',
-                'message' => $validated['confirm']
-                    ? "{$renewRequest->user->name} renewal request for '{$renewRequest->book->name}' was approved. New due date: {$newDueDate}."
-                    : "{$renewRequest->user->name} renewal request for '{$renewRequest->book->name}' was rejected.",
-                'type' => $validated['confirm']
-                    ? Notification::TYPE_RENEWAL_CONFIRMED
-                    : Notification::TYPE_RENEWAL_DECLINED,
-                'is_read' => false
-            ]);
+            $admins = User::role('admin')->get();
+            foreach ($admins as $admin) {
+                Notification::create([
+                    'user_id' => $admin->id,
+                    'book_id' => $renewRequest->book_id,
+                    'renew_request_id' => $renewRequest->id,
+                    'title' => $validated['confirm'] ? 'Renewal Approved' : 'Renewal Rejected',
+                    'message' => $validated['confirm']
+                        ? "{$renewRequest->user->name} renewal request for '{$renewRequest->book->name}' was approved. New due date: {$newDueDate}."
+                        : "{$renewRequest->user->name} renewal request for '{$renewRequest->book->name}' was rejected.",
+                    'type' => $validated['confirm']
+                        ? Notification::TYPE_RENEWAL_CONFIRMED
+                        : Notification::TYPE_RENEWAL_DECLINED,
+                    'is_read' => false
+                ]);
+            }
 
             $notification->update([
                 'is_read' => true,

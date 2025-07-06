@@ -67,7 +67,6 @@ class AuthController extends Controller
             }
             $token = $user->createToken('auth_token')->plainTextToken;
 
-
             return response()->json([
                 'access_token' => $token,
                 'user' => new UserResource($user),
@@ -88,10 +87,6 @@ class AuthController extends Controller
                 $currentToken = $user->currentAccessToken();
 
                 if ($currentToken) {
-                    // ❗ Option 1: Logout from **all devices/sessions**
-                    // $user->tokens()->delete();
-
-                    // ✅ Option 2: Logout from **current session only**
                     $currentToken->delete();
                 }
             }

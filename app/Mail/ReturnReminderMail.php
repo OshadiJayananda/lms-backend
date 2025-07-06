@@ -12,27 +12,15 @@ use App\Models\Borrow;
 class ReturnReminderMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
-
     public $book;
     public $borrow;
 
-    /**
-     * Create a new message instance.
-     *
-     * @param Book $book
-     * @param Borrow $borrow
-     */
     public function __construct(Book $book, Borrow $borrow)
     {
         $this->book = $book;
         $this->borrow = $borrow;
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
     public function build()
     {
         return $this->subject('Return Reminder - Book Due Soon')
