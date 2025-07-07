@@ -288,6 +288,13 @@ class RenewBookController extends Controller
         try {
             $renewRequest = RenewRequest::findOrFail($requestId);
 
+            // Check if the request is in a deletable state
+            if (!in_array($renewRequest->status, [RenewRequest::STATUS_APPROVED, RenewRequest::STATUS_REJECTED])) {
+                return response()->json([
+                    'message' => 'Only approved or rejected renewal requests can be deleted'
+                ], 422);
+            }
+
             // Delete related notifications first
             Notification::where('renew_request_id', $requestId)->delete();
 
