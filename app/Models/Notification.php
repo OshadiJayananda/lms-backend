@@ -41,6 +41,7 @@ class Notification extends Model
     const TYPE_RENEWAL_DECLINED = 'renewal_declined';
     const TYPE_RENEWAL_APPROVED = 'renewal_approved';
     const TYPE_BOOK_ISSUED = 'book_issued';
+    const TYPE_RENEWAL_EXPIRED = 'renewal_expired';
 
     public function user()
     {
