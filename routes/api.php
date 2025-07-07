@@ -49,6 +49,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin/renew-requests', [RenewBookController::class, 'getRenewRequests']);
     Route::post('/admin/renew-requests/{requestId}/approve', [RenewBookController::class, 'approveRenewRequest']);
     Route::post('/admin/renew-requests/{requestId}/reject', [RenewBookController::class, 'rejectRenewRequest']);
+    Route::delete('/admin/renew-requests/{requestId}', [RenewBookController::class, 'destroy']);
 
     // Availability notifications
     // Route::get('/admin/availability-notifications', [BorrowController::class, 'checkAvailabilityNotifications']);

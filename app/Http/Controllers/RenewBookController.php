@@ -281,4 +281,28 @@ class RenewBookController extends Controller
 
         return response()->json(['message' => 'Admin will be notified when copies become available']);
     }
+
+    public function destroy($requestId)
+    {
+        DB::beginTransaction();
+        try {
+            $renewRequest = RenewRequest::findOrFail($requestId);
+
+            // Delete related notifications first
+            Notification::where('renew_request_id', $requestId)->delete();
+
+            $renewRequest->delete();
+
+            DB::commit();
+
+            return response()->json(['message' => 'Renewal request deleted successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Failed to delete renewal request: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to delete renewal request',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
