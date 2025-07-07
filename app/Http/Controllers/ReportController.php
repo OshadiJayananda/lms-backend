@@ -70,8 +70,9 @@ class ReportController extends Controller
                     $toDate = request('to_date') ? Carbon::parse(request('to_date'))->endOfDay() : null;
 
                     $query = Borrow::with([
-                        'user:id,name',
-                        'book:id,name,isbn',
+                        'user:id,name,email',
+                        'book:id,name,isbn,author_id', // Remove author and include author_id
+                        'book.author:id,name', // Add this to load the author relationship
                         'payments' => fn($q) => $q->completed()->select(['id', 'borrow_id', 'amount'])
                     ])
                         ->whereIn('status', ['Issued', 'Overdue', 'Confirmed', 'Returned'])
@@ -93,8 +94,11 @@ class ReportController extends Controller
 
                             return [
                                 'id' => $borrow->id,
-                                'book' => $borrow->book,
-                                'user' => $borrow->user,
+                                'book_name' => $borrow->book->name ?? 'Unknown',
+                                'book_isbn' => $borrow->book->isbn ?? 'N/A',
+                                'book_author' => $borrow->book->author->name ?? 'Unknown',
+                                'user_name' => $borrow->user->name ?? 'Unknown',
+                                'user_email' => $borrow->user->email ?? 'N/A',
                                 'issued_date' => $borrow->issued_date->format('Y-m-d'),
                                 'due_date' => $borrow->due_date->format('Y-m-d'),
                                 'status' => $borrow->status,
@@ -115,7 +119,8 @@ class ReportController extends Controller
                         'fromDate' => $fromDate?->format('Y-m-d'),
                         'toDate' => $toDate?->format('Y-m-d'),
                         'title' => $title,
-                        'generatedAt' => now()->format('Y-m-d H:i:s')
+                        'generatedAt' => now()->format('Y-m-d H:i:s'),
+                        'policy' => BorrowingPolicy::currentPolicy()
                     ];
 
                     $pdf = Pdf::loadView('reports.overdue', $data);
