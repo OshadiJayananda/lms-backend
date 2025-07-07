@@ -8,6 +8,7 @@ use App\Models\Borrow;
 use App\Models\BorrowingPolicy;
 use App\Models\Notification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class BookReservationController extends Controller
@@ -272,6 +273,36 @@ class BookReservationController extends Controller
             Log::error('Failed to fetch pending reservations: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Failed to fetch pending reservations',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function destroy($reservationId)
+    {
+        DB::beginTransaction();
+        try {
+            $reservation = BookReservation::findOrFail($reservationId);
+
+            // Only allow deletion of rejected reservations
+            if ($reservation->status !== 'rejected') {
+                return response()->json([
+                    'message' => 'Only rejected reservations can be deleted'
+                ], 422);
+            }
+
+            // Delete related notifications first
+            Notification::where('reservation_id', $reservationId)->delete();
+
+            $reservation->delete();
+
+            DB::commit();
+
+            return response()->json(['message' => 'Reservation deleted successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Failed to delete reservation: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to delete reservation',
                 'error' => $e->getMessage()
             ], 500);
         }

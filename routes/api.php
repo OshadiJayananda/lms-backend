@@ -57,6 +57,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin/book-reservations', [BookReservationController::class, 'getReservations']);
     Route::post('/admin/book-reservations/{reservationId}/approve', [BookReservationController::class, 'approveReservation']);
     Route::post('/admin/book-reservations/{reservationId}/reject', [BookReservationController::class, 'rejectReservation']);
+    Route::delete('/admin/book-reservations/{reservationId}', [BookReservationController::class, 'destroy']);
     // Route::get('/admin/notifications', [NotificationController::class, 'getNotifications']);
     Route::post('/admin/book-reservations/{reservationId}/confirm-given', [BookReservationController::class, 'confirmBookGiven']);
     Route::get('/admin/notifications', [NotificationController::class, 'index']);
