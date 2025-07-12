@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Response;
 
 class BorrowController extends Controller
 {
@@ -327,21 +328,7 @@ class BorrowController extends Controller
         return response()->json($overdueBooks);
     }
 
-    public function getAllOverdueBooks()
-    {
 
-        $overdueBooks = Borrow::with(['user', 'book'])
-
-            ->overdue() // Using the standardized scope
-            ->get()
-            ->map(function ($borrow) {
-                $borrow->is_overdue = true;
-                $borrow->fine_amount = $borrow->calculateFine();
-                return $borrow;
-            });
-
-        return response()->json($overdueBooks);
-    }
 
     public function markAsOverdue()
     {
