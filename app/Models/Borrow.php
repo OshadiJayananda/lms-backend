@@ -84,10 +84,17 @@ class Borrow extends Model
 
         $policy = BorrowingPolicy::currentPolicy();
 
-        $today = Carbon::today();
+        // Use returned date if available, otherwise use current date
+        $endDate = $this->returned_date ? Carbon::parse($this->returned_date) : now();
+        $endDate = $endDate->startOfDay();
 
         $dueDate = Carbon::parse($this->due_date)->startOfDay();
-        $daysOverdue = $dueDate->diffInDays($today, false);
+        $daysOverdue = $dueDate->diffInDays($endDate, false);
+
+        // Only calculate fine if daysOverdue is positive
+        if ($daysOverdue <= 0) {
+            return 0.00;
+        }
 
         return round($daysOverdue * $policy->fine_per_day, 2);
     }

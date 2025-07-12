@@ -126,6 +126,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // getOverdueBooks
     Route::get('/borrows/overdue', [BorrowController::class, 'getOverdueBooks']);
+    Route::get('/borrows/overdues', [BorrowController::class, 'getAllOverdueBooks']);
 
 
     // Book availability check

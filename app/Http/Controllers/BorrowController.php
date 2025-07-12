@@ -313,7 +313,25 @@ class BorrowController extends Controller
 
     public function getOverdueBooks()
     {
+        $user = Auth::user();
         $overdueBooks = Borrow::with(['user', 'book'])
+            ->where('user_id', $user->id)
+            ->overdue() // Using the standardized scope
+            ->get()
+            ->map(function ($borrow) {
+                $borrow->is_overdue = true;
+                $borrow->fine_amount = $borrow->calculateFine();
+                return $borrow;
+            });
+
+        return response()->json($overdueBooks);
+    }
+
+    public function getAllOverdueBooks()
+    {
+
+        $overdueBooks = Borrow::with(['user', 'book'])
+
             ->overdue() // Using the standardized scope
             ->get()
             ->map(function ($borrow) {
