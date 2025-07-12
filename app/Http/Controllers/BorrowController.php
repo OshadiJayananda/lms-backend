@@ -96,7 +96,11 @@ class BorrowController extends Controller
 
         // Apply status filter
         if ($status) {
-            $query->where('status', $status);
+            if (strtolower($status) === 'overdue') {
+                $query->overdue();
+            } else {
+                $query->where('status', $status);
+            }
         }
 
         $borrowedBooks = $query->orderBy('created_at', 'desc')

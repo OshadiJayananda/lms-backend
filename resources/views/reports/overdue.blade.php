@@ -7,53 +7,60 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .header h1 {
             margin: 0;
-            font-size: 24px;
+            font-size: 20px;
         }
 
         .header p {
             margin: 5px 0 0;
-            font-size: 14px;
+            font-size: 12px;
             color: #666;
         }
 
         .summary {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .summary-box {
-            display: inline-block;
-            padding: 10px 15px;
-            margin-right: 10px;
+            padding: 8px 12px;
             background: #f5f5f5;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 12px;
+            white-space: nowrap;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            table-layout: fixed;
         }
 
         th,
         td {
-            padding: 4px 6px;
+            padding: 5px;
             border: 1px solid #ddd;
             text-align: left;
+            word-wrap: break-word;
         }
 
         th {
             background-color: #f2f2f2;
             font-weight: bold;
+            font-size: 11px;
         }
 
         .text-right {
@@ -65,8 +72,8 @@
         }
 
         .footer {
-            margin-top: 30px;
-            font-size: 12px;
+            margin-top: 20px;
+            font-size: 10px;
             color: #666;
             text-align: center;
         }
@@ -77,6 +84,35 @@
 
         .danger {
             background-color: #ffebee;
+        }
+
+        /* Column width adjustments */
+        .col-no {
+            width: 3%;
+        }
+
+        .col-book {
+            width: 18%;
+        }
+
+        .col-user {
+            width: 15%;
+        }
+
+        .col-date {
+            width: 8%;
+        }
+
+        .col-days {
+            width: 7%;
+        }
+
+        .col-fine {
+            width: 10%;
+        }
+
+        .col-status {
+            width: 8%;
         }
     </style>
 </head>
@@ -95,73 +131,66 @@
     <div class="summary">
         <div class="summary-box">Total Overdue: {{ $totalOverdue }}</div>
         <div class="summary-box">Total Fine: Rs.{{ number_format($totalFine, 2) }}</div>
-        <div class="summary-box">Total Paid: Rs.{{ number_format($totalPaid, 2) }}</div>
-        <div class="summary-box">Remaining: Rs.{{ number_format($totalRemaining, 2) }}</div>
         <div class="summary-box">Fine Rate: Rs.{{ $policy->fine_per_day ?? 50 }}/day</div>
     </div>
 
     <table>
         <thead>
             <tr>
-                <th>#</th>
-                <th>Book</th>
-                <th>User</th>
-                <th>Issued Date</th>
-                <th>Due Date</th>
-                <th>Days Overdue</th>
-                <th class="text-right">Calculated Fine</th>
-                <th class="text-right">Paid Amount</th>
-                <th class="text-right">Remaining</th>
-                <th>Status</th>
+                <th class="col-no">#</th>
+                <th class="col-book">Book</th>
+                <th class="col-user">User</th>
+                <th class="col-date">Issued Date</th>
+                <th class="col-date">Due Date</th>
+                <th class="col-date">Returned Date</th>
+                <th class="col-days text-center">Days Overdue</th>
+                <th class="col-fine text-right">Calculated Fine</th>
+                <th class="col-status">Status</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($overdueBooks as $index => $book)
                 <tr
                     class="{{ $book['days_overdue'] > 30 ? 'danger' : ($book['days_overdue'] > 14 ? 'highlight' : '') }}">
-                    <td>{{ $index + 1 }}</td>
-                    <td>
-                        {{ $book['book_name'] }}<br>
-                        <small>ISBN: {{ $book['book_isbn'] }} | {{ $book['book_author'] }}</small>
+                    <td class="col-no">{{ $index + 1 }}</td>
+                    <td class="col-book">
+                        <strong>{{ $book['book_name'] }}</strong><br>
+                        <small>ISBN: {{ $book['book_isbn'] }}<br>{{ $book['book_author'] }}</small>
                     </td>
-                    <td>
-                        {{ $book['user_name'] }}<br>
+                    <td class="col-user">
+                        <strong>{{ $book['user_name'] }}</strong><br>
                         <small>{{ $book['user_email'] }}</small>
                     </td>
-                    <td>{{ $book['issued_date'] }}</td>
-                    <td>{{ $book['due_date'] }}</td>
-                    <td class="text-center">{{ $book['days_overdue'] }}</td>
-                    <td class="text-right">Rs.{{ number_format($book['calculated_fine'], 2) }}</td>
-                    <td class="text-right">Rs.{{ number_format($book['paid_amount'], 2) }}</td>
-                    <td class="text-right">Rs.{{ number_format($book['remaining_fine'], 2) }}</td>
-                    <td>{{ ucfirst($book['status']) }}</td>
+                    <td class="col-date">{{ $book['issued_date'] }}</td>
+                    <td class="col-date">{{ $book['due_date'] }}</td>
+                    <td class="col-date">{{ $book['returned_date'] ?? '-' }}</td>
+                    <td class="col-days text-center">{{ $book['days_overdue'] }}</td>
+                    <td class="col-fine text-right">Rs.{{ number_format($book['calculated_fine'], 2) }}</td>
+                    <td class="col-status">{{ ucfirst($book['status']) }}</td>
                 </tr>
             @endforeach
         </tbody>
         <tfoot>
             <tr>
-                <th colspan="6" class="text-right">Totals:</th>
+                <th colspan="7" class="text-right">Totals:</th>
                 <th class="text-right">Rs.{{ number_format($totalFine, 2) }}</th>
-                <th class="text-right">Rs.{{ number_format($totalPaid, 2) }}</th>
-                <th class="text-right">Rs.{{ number_format($totalRemaining, 2) }}</th>
                 <th></th>
             </tr>
         </tfoot>
     </table>
 
     <div class="footer">
-        <p>Generated by {{ config('app.name') }} | Page <span class="pageNumber"></span> of <span
-                class="totalPages"></span></p>
+        <p>Generated by {{ config('app.name') }}</p>
     </div>
 
     <script type="text/php">
         if (isset($pdf)) {
             $text = "Page {PAGE_NUM} of {PAGE_COUNT}";
-            $size = 10;
+            $size = 9;
             $font = $fontMetrics->getFont("Arial");
             $width = $fontMetrics->get_text_width($text, $font, $size) / 2;
             $x = ($pdf->get_width() - $width) / 2;
-            $y = $pdf->get_height() - 35;
+            $y = $pdf->get_height() - 20;
             $pdf->page_text($x, $y, $text, $font, $size);
         }
     </script>

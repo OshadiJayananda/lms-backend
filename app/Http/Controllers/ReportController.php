@@ -89,7 +89,9 @@ class ReportController extends Controller
                     $overdueBooks = $query->get()
                         ->filter(fn($borrow) => $borrow->isOverdue())
                         ->map(function ($borrow) {
-                            $daysOverdue = now()->diffInDays($borrow->due_date, false);
+                            $end_date = $borrow->returned_date ?? now();
+                            $end_date = $end_date->startOfDay();
+                            $daysOverdue = $borrow->due_date->startOfDay()->diffInDays($end_date, false);
                             $finePerDay = optional(BorrowingPolicy::currentPolicy())->fine_per_day ?? 10;
 
                             return [
@@ -101,12 +103,11 @@ class ReportController extends Controller
                                 'user_email' => $borrow->user->email ?? 'N/A',
                                 'issued_date' => $borrow->issued_date->format('Y-m-d'),
                                 'due_date' => $borrow->due_date->format('Y-m-d'),
+                                'returned_date' => $borrow->returned_date ? $borrow->returned_date->format('Y-m-d') : null,
                                 'status' => $borrow->status,
                                 'days_overdue' => $daysOverdue,
                                 'fine_per_day' => $finePerDay,
                                 'calculated_fine' => $daysOverdue * $finePerDay,
-                                'paid_amount' => $borrow->payments->sum('amount'),
-                                'remaining_fine' => max(0, ($daysOverdue * $finePerDay) - $borrow->payments->sum('amount')),
                             ];
                         });
 

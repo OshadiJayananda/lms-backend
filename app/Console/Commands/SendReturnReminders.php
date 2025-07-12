@@ -43,7 +43,7 @@ class SendReturnReminders extends Command
             // Send reminder email
             Mail::to($user->email)->send(new ReturnReminderMail($book, $borrow));
 
-            $this->info("Reminder sent to {$user->email} for book '{$book->title}'.");
+            $this->info("Reminder sent to {$user->email} for book '{$book->name}'.");
         }
 
         $this->info('All reminders sent successfully.');
