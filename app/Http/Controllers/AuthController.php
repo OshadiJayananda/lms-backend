@@ -15,7 +15,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -53,11 +55,31 @@ class AuthController extends Controller
     // Login user
     public function login(LoginUserRequest $request)
     {
+        // Rate limiting key
+        $throttleKey = Str::lower($request->input('email')) . '|' . $request->ip();
+
+        // Check if too many attempts
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            return response()->json([
+                'error' => 'Too many login attempts. Please try again in ' . $seconds . ' seconds.',
+                'retry_after' => $seconds
+            ], Response::HTTP_TOO_MANY_REQUESTS);
+        }
+
         try {
             $validatedCredentials = $request->validated();
 
             if (!Auth::attempt(['email' => $validatedCredentials['email'], 'password' => $validatedCredentials['password']])) {
-                return response()->json(['error' => 'Invalid credentials'], Response::HTTP_UNAUTHORIZED);
+                // Increment failed attempts
+                RateLimiter::hit($throttleKey, 300); // 5 minute decay
+
+                $remainingAttempts = 5 - RateLimiter::attempts($throttleKey);
+
+                return response()->json([
+                    'error' => 'Invalid credentials',
+                    'remaining_attempts' => $remainingAttempts
+                ], Response::HTTP_UNAUTHORIZED);
             }
 
             $user = Auth::user();
@@ -65,6 +87,10 @@ class AuthController extends Controller
             if (!$user) {
                 return response()->json(['error' => 'Invalid credentials'], Response::HTTP_UNAUTHORIZED);
             }
+
+            // Clear rate limiter on successful login
+            RateLimiter::clear($throttleKey);
+
             $token = $user->createToken('auth_token')->plainTextToken;
 
             return response()->json([
@@ -77,7 +103,6 @@ class AuthController extends Controller
             return response()->json(['message' => 'An unexpected error occurred.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-
     // Logout user
     public function logout(Request $request)
     {
