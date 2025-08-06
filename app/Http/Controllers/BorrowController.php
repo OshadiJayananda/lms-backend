@@ -90,7 +90,8 @@ class BorrowController extends Controller
         if ($searchQuery) {
             $query->whereHas('book', function ($q) use ($searchQuery) {
                 $q->where('name', 'like', "%{$searchQuery}%")
-                    ->orWhere('id', 'like', "%{$searchQuery}%");
+                    ->orWhere('id', 'like', "%{$searchQuery}%")
+                    ->orWhere('isbn', 'like', "%{$searchQuery}%");
             });
         }
 
@@ -221,7 +222,8 @@ class BorrowController extends Controller
             ->when($query, function ($q) use ($query) {
                 $q->whereHas('book', function ($q) use ($query) {
                     $q->where('name', 'like', "%{$query}%") // Search by book name
-                        ->orWhere('id', 'like', "%{$query}%"); // Search by book ID
+                        ->orWhere('id', 'like', "%{$query}%") // Search by book ID
+                        ->orWhere('isbn', 'like', "%{$query}%"); // Search by book ISBN
                 })
                     ->orWhereHas('user', function ($q) use ($query) {
                         $q->where('id', 'like', "%{$query}%") // Search by user ID
