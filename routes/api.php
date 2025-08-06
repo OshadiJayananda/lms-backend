@@ -103,6 +103,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
             'email' => $user->email,
             'address' => $user->address,
             'contact' => $user->contact,
+            'created_at' => $user->created_at,
+            'updated_at' => $user->updated_at,
             'role' => $user->getRoleNames()->first()
         ]);
     });
