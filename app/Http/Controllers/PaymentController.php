@@ -165,11 +165,27 @@ class PaymentController extends Controller
         return response()->json($payments);
     }
 
-    public function getPaymentList()
+    public function getPaymentList(Request $request)
     {
+        $perPage = $request->query('per_page', 10); // Default to 10 items per page
+        $searchQuery = $request->query('q');
+
         $payments = Payment::with('borrow', 'borrow.book', 'borrow.user')
+            ->when($searchQuery, function ($query) use ($searchQuery) {
+                $query->whereHas('borrow.book', function ($q) use ($searchQuery) {
+                    $q->where('name', 'like', "%{$searchQuery}%")
+                        ->orWhere('isbn', 'like', "%{$searchQuery}%");
+                })
+                    ->orWhereHas('borrow.user', function ($q) use ($searchQuery) {
+                        $q->where('name', 'like', "%{$searchQuery}%")
+                            ->orWhere('email', 'like', "%{$searchQuery}%");
+                    })
+                    ->orWhere('stripe_payment_id', 'like', "%{$searchQuery}%")
+                    ->orWhere('amount', 'like', "%{$searchQuery}%")
+                    ->orWhere('description', 'like', "%{$searchQuery}%");
+            })
             ->orderBy('created_at', 'desc')
-            ->paginate(10);
+            ->paginate($perPage);
 
         return response()->json($payments);
     }
