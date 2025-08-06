@@ -160,16 +160,41 @@ class AuthController extends Controller
 
             $validatedData = $request->validate([
                 'name' => 'sometimes|string|max:255',
-                'contact' => 'sometimes|string|max:20',
+                'contact' => [
+                    'sometimes',
+                    'string',
+                    'regex:/^[0-9]{10}$/', // Exactly 10 digits
+                    function ($attribute, $value, $fail) {
+                        if (strlen($value) !== 10) {
+                            $fail('The contact number must be exactly 10 digits.');
+                        }
+                    },
+                ],
                 'address' => 'sometimes|string|max:255',
             ]);
+
+            // Force update the timestamp
+            $validatedData['updated_at'] = now();
 
             $user->update($validatedData);
 
             return response()->json([
                 'message' => 'User details updated successfully',
-                'user' => new UserResource($user)
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'address' => $user->address,
+                    'contact' => $user->contact,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ]
             ], 200);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
         } catch (Exception $e) {
             Log::error($e->getMessage());
             return response()->json(['message' => 'An error occurred while updating user details.'], 500);
