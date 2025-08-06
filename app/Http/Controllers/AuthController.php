@@ -163,7 +163,7 @@ class AuthController extends Controller
                 'contact' => [
                     'sometimes',
                     'string',
-                    'regex:/^[0-9]{10}$/', // Exactly 10 digits
+                    'regex:/^[0-9]{10}$/',
                     function ($attribute, $value, $fail) {
                         if (strlen($value) !== 10) {
                             $fail('The contact number must be exactly 10 digits.');
