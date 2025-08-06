@@ -106,7 +106,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
             'role' => $user->getRoleNames()->first()
         ]);
     });
-
+    // In your routes file (api.php)
+    Route::put('/user/update-details', [AuthController::class, 'updateUserDetails']);
     Route::get('authors', [AuthorController::class, 'index']);
     Route::get('authors/{author}', [AuthorController::class, 'show']);
 

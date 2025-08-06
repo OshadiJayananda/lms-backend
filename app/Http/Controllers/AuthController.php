@@ -151,4 +151,28 @@ class AuthController extends Controller
             return response()->json(['message' => 'An error occurred while validating the token.'], 500);
         }
     }
+
+    // In AuthController.php
+    public function updateUserDetails(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            $validatedData = $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'contact' => 'sometimes|string|max:20',
+                'address' => 'sometimes|string|max:255',
+            ]);
+
+            $user->update($validatedData);
+
+            return response()->json([
+                'message' => 'User details updated successfully',
+                'user' => new UserResource($user)
+            ], 200);
+        } catch (Exception $e) {
+            Log::error($e->getMessage());
+            return response()->json(['message' => 'An error occurred while updating user details.'], 500);
+        }
+    }
 }
