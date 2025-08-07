@@ -14,3 +14,4 @@ Schedule::command('books:mark-overdue')
     ->onFailure(function () {});
 
 Schedule::command('reminders:send')->dailyAt('08:00');
+Schedule::command('renewals:cancel-stale')->daily();

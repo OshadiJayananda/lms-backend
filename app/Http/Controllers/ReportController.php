@@ -60,6 +60,15 @@ class ReportController extends Controller
                 if ($toDate) $query->where('issued_date', '<=', $toDate);
 
                 $data['borrowings'] = $query->latest()->get();
+
+                $logData = $data['borrowings']->map(function ($borrow) {
+                    return [
+                        'id' => $borrow->id,
+                        'returned_date' => $borrow->returned_date,
+                    ];
+                });
+
+                info('Borrowings Returned Date Debug:', $logData->toArray());
                 break;
             case 'overdue':
                 try {

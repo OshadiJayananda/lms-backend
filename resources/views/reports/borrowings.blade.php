@@ -88,10 +88,10 @@
         <div class="summary-item"><strong>Total Borrowings:</strong> {{ $borrowings->count() }}</div><br />
         <div class="summary-item"><strong>Issued:</strong> {{ $borrowings->where('status', 'Issued')->count() }}</div>
         <br />
-        <div class="summary-item"><strong>Returned But Not Given:</strong>
+        <div class="summary-item"><strong>Unconfirmed Returns:</strong>
             {{ $borrowings->where('status', 'Returned')->count() }}
         </div><br />
-        <div class="summary-item"><strong>Returned And Given:</strong>
+        <div class="summary-item"><strong>Confirmed Returns:</strong>
             {{ $borrowings->where('status', 'Confirmed')->count() }}
         </div><br />
     </div>
@@ -99,8 +99,8 @@
     <table>
         <thead>
             <tr>
-                <th>ID</th>
-                <th>Book</th>
+                <th>No</th>
+                <th>Book (Borrow ID)</th>
                 <th>Member</th>
                 <th>Issued Date</th>
                 <th>Due Date</th>
@@ -109,17 +109,23 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($borrowings as $borrowing)
+            @forelse ($borrowings as $borrowing)
                 <tr>
-                    <td>{{ $borrowing->id }}</td>
-                    <td>{{ $borrowing->book->name }}</td>
+                    <td>{{ $loop->iteration }}</td>
+                    <td>{{ $borrowing->book->name }} ({{ $borrowing->id }})</td>
                     <td>{{ $borrowing->user->name }}</td>
-                    <td>{{ $borrowing->issued_date->format('Y-m-d') }}</td>
-                    <td>{{ $borrowing->due_date->format('Y-m-d') }}</td>
-                    <td>{{ $borrowing->returned_date ? $borrowing->returned_date->format('Y-m-d') : 'N/A' }}</td>
+                    <td>{{ optional($borrowing->issued_date)->format('Y-m-d') ?? 'N/A' }}</td>
+                    <td>{{ optional($borrowing->due_date)->format('Y-m-d') ?? 'N/A' }}</td>
+                    <td>{{ optional($borrowing->returned_date)->format('Y-m-d') ?? 'N/A' }}</td>
                     <td class="status-{{ strtolower($borrowing->status) }}">{{ $borrowing->status }}</td>
                 </tr>
-            @endforeach
+            @empty
+                <tr>
+                    <td colspan="7" style="text-align: center; color: #999;">
+                        No borrowings found for the selected date range.
+                    </td>
+                </tr>
+            @endforelse
         </tbody>
     </table>
 

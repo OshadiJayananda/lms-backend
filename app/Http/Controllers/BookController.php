@@ -113,44 +113,62 @@ class BookController extends Controller
 
     public function getDashboardStats()
     {
+        // Existing stats...
         $totalBooks = Book::count();
         $totalMembers = User::role('user')->count();
         $borrowedBooks = Borrow::where('status', 'Issued')->count();
         $overdueBooks = Borrow::overdue()->count();
 
-        // Books Borrowed Per Month (last 6 months)
+        // Get overdue amounts with users
+        $overdueWithUsers = User::role('user')
+            ->with(['borrowedBooks' => function ($query) {
+                $query->overdue()->with('book');
+            }])
+            ->whereHas('borrowedBooks', function ($query) {
+                $query->overdue();
+            })
+            ->get()
+            ->map(function ($user) {
+                $totalFine = $user->borrowedBooks->sum(function ($borrow) {
+                    return $borrow->calculateFine();
+                });
+
+                return [
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                    'user_email' => $user->email,
+                    'total_fine' => $totalFine,
+                    'overdue_books_count' => $user->borrowedBooks->count()
+                ];
+            })
+            ->sortByDesc('total_fine')
+            ->values()
+            ->take(5); // Limit to top 5
+
+        // Rest of your existing stats...
         $borrowedPerMonth = Borrow::selectRaw('MONTH(issued_date) as month, COUNT(*) as count')
             ->whereYear('issued_date', now()->year)
             ->groupBy('month')
             ->orderBy('month')
             ->get();
 
-        // Top Borrowing Members (by total borrows)
         $topMembers = User::role('user')
-            ->select('id', 'name')
+            ->select('id', 'name', 'email')
             ->withCount('borrowedBooks')
             ->orderByDesc('borrowed_books_count')
             ->limit(5)
             ->get();
 
-        // Most Borrowed Books
         $topBooks = Book::select('id', 'name')
             ->withCount('borrows')
             ->orderByDesc('borrows_count')
             ->limit(5)
             ->get();
 
-        // Recent Book Requests
         $recentRequests = Borrow::with(['user', 'book'])->where('status', 'Pending')
             ->latest()
             ->take(5)
             ->get();
-
-        // Recently Added Books
-        $recentBooks = Book::latest()->take(5)->get();
-
-        // Recent Members
-        $recentMembers = User::role('user')->latest()->take(5)->get();
 
         return response()->json([
             'totalBooks' => $totalBooks,
@@ -161,8 +179,7 @@ class BookController extends Controller
             'topMembers' => $topMembers,
             'topBooks' => $topBooks,
             'recentRequests' => $recentRequests,
-            'recentBooks' => $recentBooks,
-            'recentMembers' => $recentMembers,
+            'overdueWithUsers' => $overdueWithUsers, // Add this new field
         ]);
     }
 
