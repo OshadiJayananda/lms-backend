@@ -15,7 +15,7 @@ class AuthorController extends Controller
      */
     public function index()
     {
-        $authors = Author::orderBy('name')->paginate(10); // 10 items per page
+        $authors = Author::orderBy('name')->get();
         return response()->json($authors);
     }
 
