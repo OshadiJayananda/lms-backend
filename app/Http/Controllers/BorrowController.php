@@ -217,7 +217,6 @@ class BorrowController extends Controller
     public function getAllBorrowedBooks(Request $request)
     {
         $query = $request->query('q'); // Get the search query from the request
-        $perPage = $request->query('per_page', 10); // Default to 10 items per page
 
         $borrowedBooks = Borrow::with(['user', 'book'])
             ->when($query, function ($q) use ($query) {
@@ -231,7 +230,7 @@ class BorrowController extends Controller
                             ->orWhere('name', 'like', "%{$query}%"); // Search by user name
                     });
             })
-            ->paginate($perPage);
+            ->get();
 
         return response()->json($borrowedBooks);
     }
