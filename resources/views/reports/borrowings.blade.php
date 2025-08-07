@@ -100,7 +100,7 @@
         <thead>
             <tr>
                 <th>No</th>
-                <th>Book</th>
+                <th>Book (Borrow ID)</th>
                 <th>Member</th>
                 <th>Issued Date</th>
                 <th>Due Date</th>
@@ -112,7 +112,7 @@
             @forelse ($borrowings as $borrowing)
                 <tr>
                     <td>{{ $loop->iteration }}</td>
-                    <td>{{ $borrowing->book->name }} - {{ $borrowing->id }}</td>
+                    <td>{{ $borrowing->book->name }} ({{ $borrowing->id }})</td>
                     <td>{{ $borrowing->user->name }}</td>
                     <td>{{ optional($borrowing->issued_date)->format('Y-m-d') ?? 'N/A' }}</td>
                     <td>{{ optional($borrowing->due_date)->format('Y-m-d') ?? 'N/A' }}</td>
