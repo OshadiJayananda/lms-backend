@@ -64,10 +64,24 @@ class AdminController extends Controller
 
     private function generateRandomPassword($name)
     {
+        //Must be at least 8 characters with uppercase, lowercase, number and special character
         $cleanName = strtolower(preg_replace('/\s+/', '', $name));
-        $randomString = bin2hex(random_bytes(5)); // 10 characters
         $namePart = substr($cleanName, 0, 2);
-        $password = $namePart . $randomString;
+
+        // Ensure at least one uppercase, lowercase, number, and special character
+        $uppercase = chr(rand(65, 90)); // A-Z
+        $lowercase = chr(rand(97, 122)); // a-z
+        $number    = chr(rand(48, 57)); // 0-9
+        $special   = chr(rand(33, 47)); // special characters like ! " # $
+
+        // Random filler to reach desired length
+        $randomLength = 8 - strlen($namePart) - 4;
+        $randomString = substr(str_shuffle(
+            str_repeat('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*', 5)
+        ), 0, $randomLength);
+
+        // Combine and shuffle to avoid predictable order
+        $password = str_shuffle($namePart . $uppercase . $lowercase . $number . $special . $randomString);
 
         return $password;
     }
