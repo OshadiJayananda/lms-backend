@@ -24,7 +24,7 @@ class BookApprovalMail extends Mailable implements ShouldQueue
 
     public function build()
     {
-        return $this->subject('Book Request Approved')
+        return $this->subject('Book Request Approved - ' . $this->book->name)
             ->view('emails.book_approval')
             ->with([
                 'book' => $this->book,
