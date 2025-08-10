@@ -118,26 +118,30 @@ class BorrowController extends Controller
 
     public function approveRequest($borrowId)
     {
-        $borrow = Borrow::findOrFail($borrowId);
+        $borrow = Borrow::with(['user', 'book'])->findOrFail($borrowId);
         $borrow->status = 'Approved';
         $borrow->save();
 
-        // Send email to user
-        $user = User::findOrFail($borrow->user_id);
-        $book = Book::findOrFail($borrow->book_id);
-
+        // Create notification
         Notification::create([
             'user_id' => $borrow->user_id,
             'book_id' => $borrow->book_id,
             'title' => 'Book Request Approved',
-            'message' => "Your request for '{$book->name}' has been approved. You can now collect the book from the library.",
+            'message' => "Your request for '{$borrow->book->name}' has been approved. You can now collect the book from the library.",
             'type' => 'book_approved',
             'is_read' => false
         ]);
 
-        Mail::to($user->email)->send(new BookApprovalMail($book, $borrow));
+        // Send email
+        try {
+            Mail::to($borrow->user->email)
+                ->send(new BookApprovalMail($borrow->book, $borrow));
 
-        return response()->json(['message' => 'Request approved successfully!']);
+            return response()->json(['message' => 'Request approved successfully!']);
+        } catch (\Exception $e) {
+            \Log::error('Failed to send approval email: ' . $e->getMessage());
+            return response()->json(['message' => 'Request approved but failed to send email notification.'], 200);
+        }
     }
 
     public function rejectRequest($borrowId)
