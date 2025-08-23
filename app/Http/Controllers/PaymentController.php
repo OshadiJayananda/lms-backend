@@ -174,11 +174,13 @@ class PaymentController extends Controller
             ->when($searchQuery, function ($query) use ($searchQuery) {
                 $query->whereHas('borrow.book', function ($q) use ($searchQuery) {
                     $q->where('name', 'like', "%{$searchQuery}%")
-                        ->orWhere('isbn', 'like', "%{$searchQuery}%");
+                        ->orWhere('isbn', 'like', "%{$searchQuery}%")
+                        ->orWhere('id', 'like', "%{$searchQuery}%");
                 })
                     ->orWhereHas('borrow.user', function ($q) use ($searchQuery) {
                         $q->where('name', 'like', "%{$searchQuery}%")
-                            ->orWhere('email', 'like', "%{$searchQuery}%");
+                            ->orWhere('email', 'like', "%{$searchQuery}%")
+                            ->orWhere('id', 'like', "%{$searchQuery}%");
                     })
                     ->orWhere('stripe_payment_id', 'like', "%{$searchQuery}%")
                     ->orWhere('amount', 'like', "%{$searchQuery}%")
