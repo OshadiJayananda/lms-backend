@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BorrowingPolicyController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuthorController;
@@ -67,6 +68,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::put('authors/{author}', [AuthorController::class, 'update']);
     Route::delete('authors/{author}', [AuthorController::class, 'destroy']);
     Route::get('admin/members', [MemberController::class, 'index']);
+    Route::post('admins', [AdminController::class, 'store']);
     Route::get('/admin/dashboard-stats', [BookController::class, 'getDashboardStats']);
     Route::put('/borrowing-policies', [BorrowingPolicyController::class, 'update']);
     Route::delete('/borrowing-policies', [BorrowingPolicyController::class, 'destroy']);
