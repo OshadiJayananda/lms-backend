@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Borrow;
 use App\Models\Payment;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
 use Stripe\Stripe;
 use Stripe\Checkout\Session;
@@ -247,15 +248,15 @@ class PaymentController extends Controller
 
     public function getOverdueList(Request $request)
     {
-        $perPage = (int) $request->query('per_page', 10);
+        $perPage     = (int) $request->query('per_page', 10);
+        $currentPage = (int) $request->query('page', 1);
         $searchQuery = $request->query('q');
 
-        $query = Borrow::with(['book', 'user'])
+        // Base query: overdue + unpaid (same semantics as before)
+        $base = Borrow::with(['book', 'user'])
             ->overdue()
             ->where(function ($q) {
-                // Only include items where fine is not yet marked paid
-                $q->whereNull('fine_paid')
-                    ->orWhere('fine_paid', false);
+                $q->whereNull('fine_paid')->orWhere('fine_paid', false);
             })
             ->when($searchQuery, function ($q) use ($searchQuery) {
                 $q->whereHas('book', function ($q2) use ($searchQuery) {
@@ -271,14 +272,34 @@ class PaymentController extends Controller
             })
             ->orderBy('due_date', 'asc');
 
-        $paginator = $query->paginate($perPage);
+        // Pull all matching rows (needed to compute fine_amount in PHP)
+        $all = $base->get();
 
-        // Append computed fields like in your getOverdueBooks()
-        $paginator->getCollection()->transform(function ($borrow) {
-            $borrow->is_overdue = true;
+        // Compute fine_amount like your getOverdueBooks, then filter out zero/negative
+        $filtered = $all->map(function ($borrow) {
+            $borrow->is_overdue  = true;
             $borrow->fine_amount = (float) $borrow->calculateFine();
             return $borrow;
-        });
+        })->filter(function ($borrow) {
+            // Keep only positive fines
+            return $borrow->fine_amount > 0;
+        })->values();
+
+        // Manual pagination over filtered results
+        $total      = $filtered->count();
+        $offset     = max(0, ($currentPage - 1) * $perPage);
+        $pageItems  = $filtered->slice($offset, $perPage)->values();
+
+        $paginator = new LengthAwarePaginator(
+            $pageItems,
+            $total,
+            $perPage,
+            $currentPage,
+            [
+                'path'     => url()->current(),
+                'pageName' => 'page',
+            ]
+        );
 
         return response()->json($paginator);
     }
