@@ -182,13 +182,44 @@ class PaymentController extends Controller
                             ->orWhere('email', 'like', "%{$searchQuery}%")
                             ->orWhere('id', 'like', "%{$searchQuery}%");
                     })
-                    ->orWhere('stripe_payment_id', 'like', "%{$searchQuery}%")
-                    ->orWhere('amount', 'like', "%{$searchQuery}%")
-                    ->orWhere('description', 'like', "%{$searchQuery}%");
+                    ->orWhere('stripe_payment_id', 'like', "%{$searchQuery}%");
+                // ->orWhere('amount', 'like', "%{$searchQuery}%")
+                // ->orWhere('description', 'like', "%{$searchQuery}%");
             })
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
         return response()->json($payments);
+    }
+
+    // PaymentController.php
+    public function getPaymentSummary(Request $request)
+    {
+        $searchQuery = $request->query('q');
+
+        $query = Payment::query()
+            ->when($searchQuery, function ($q) use ($searchQuery) {
+                $q->whereHas('borrow.book', function ($q2) use ($searchQuery) {
+                    $q2->where('name', 'like', "%{$searchQuery}%")
+                        ->orWhere('isbn', 'like', "%{$searchQuery}%")
+                        ->orWhere('id', 'like', "%{$searchQuery}%");
+                })
+                    ->orWhereHas('borrow.user', function ($q2) use ($searchQuery) {
+                        $q2->where('name', 'like', "%{$searchQuery}%")
+                            ->orWhere('email', 'like', "%{$searchQuery}%")
+                            ->orWhere('id', 'like', "%{$searchQuery}%");
+                    })
+                    ->orWhere('stripe_payment_id', 'like', "%{$searchQuery}%");
+                // ->orWhere('amount', 'like', "%{$searchQuery}%")
+                // ->orWhere('description', 'like', "%{$searchQuery}%");
+            });
+
+        $totalAll = (clone $query)->sum('amount');
+        $totalCompleted = (clone $query)->where('status', 'completed')->sum('amount');
+
+        return response()->json([
+            'total_all' => $totalAll,
+            'total_completed' => $totalCompleted,
+        ]);
     }
 }
