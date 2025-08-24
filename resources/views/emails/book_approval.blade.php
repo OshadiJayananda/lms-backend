@@ -13,7 +13,7 @@
     <p>Book Details:</p>
     <ul>
         <li>Title: {{ $book->name }}</li>
-        <li>Author: {{ $book->author }}</li>
+        <li>Author: {{ $book->author->name }}</li>
         <li>ISBN: {{ $book->isbn }}</li>
     </ul>
     <p>Thank you!</p>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Borrow;
 use App\Models\Payment;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
 use Stripe\Stripe;
 use Stripe\Checkout\Session;
@@ -174,19 +175,132 @@ class PaymentController extends Controller
             ->when($searchQuery, function ($query) use ($searchQuery) {
                 $query->whereHas('borrow.book', function ($q) use ($searchQuery) {
                     $q->where('name', 'like', "%{$searchQuery}%")
-                        ->orWhere('isbn', 'like', "%{$searchQuery}%");
+                        ->orWhere('isbn', 'like', "%{$searchQuery}%")
+                        ->orWhere('id', 'like', "%{$searchQuery}%");
                 })
                     ->orWhereHas('borrow.user', function ($q) use ($searchQuery) {
                         $q->where('name', 'like', "%{$searchQuery}%")
-                            ->orWhere('email', 'like', "%{$searchQuery}%");
+                            ->orWhere('email', 'like', "%{$searchQuery}%")
+                            ->orWhere('id', 'like', "%{$searchQuery}%");
                     })
-                    ->orWhere('stripe_payment_id', 'like', "%{$searchQuery}%")
-                    ->orWhere('amount', 'like', "%{$searchQuery}%")
-                    ->orWhere('description', 'like', "%{$searchQuery}%");
+                    ->orWhere('stripe_payment_id', 'like', "%{$searchQuery}%");
+                // ->orWhere('amount', 'like', "%{$searchQuery}%")
+                // ->orWhere('description', 'like', "%{$searchQuery}%");
             })
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
         return response()->json($payments);
+    }
+
+    public function getPaymentSummary(Request $request)
+    {
+        $searchQuery = $request->query('q');
+
+        // payments part (for completed totals)
+        $paymentQuery = Payment::query()
+            ->when($searchQuery, function ($q) use ($searchQuery) {
+                $q->whereHas('borrow.book', function ($q2) use ($searchQuery) {
+                    $q2->where('name', 'like', "%{$searchQuery}%")
+                        ->orWhere('isbn', 'like', "%{$searchQuery}%")
+                        ->orWhere('id', 'like', "%{$searchQuery}%");
+                })
+                    ->orWhereHas('borrow.user', function ($q2) use ($searchQuery) {
+                        $q2->where('name', 'like', "%{$searchQuery}%")
+                            ->orWhere('email', 'like', "%{$searchQuery}%")
+                            ->orWhere('id', 'like', "%{$searchQuery}%");
+                    })
+                    ->orWhere('stripe_payment_id', 'like', "%{$searchQuery}%")
+                    ->orWhere('amount', 'like', "%{$searchQuery}%")
+                    ->orWhere('description', 'like', "%{$searchQuery}%");
+            });
+
+        $totalCompleted = (clone $paymentQuery)->where('status', 'completed')->sum('amount');
+
+        // overdue (unpaid) part
+        $overdueQuery = Borrow::with(['book', 'user'])
+            ->overdue()
+            ->where(function ($q) {
+                $q->whereNull('fine_paid')->orWhere('fine_paid', false);
+            })
+            ->when($searchQuery, function ($q) use ($searchQuery) {
+                $q->whereHas('book', function ($q2) use ($searchQuery) {
+                    $q2->where('name', 'like', "%{$searchQuery}%")
+                        ->orWhere('isbn', 'like', "%{$searchQuery}%")
+                        ->orWhere('id', 'like', "%{$searchQuery}%");
+                })
+                    ->orWhereHas('user', function ($q2) use ($searchQuery) {
+                        $q2->where('name', 'like', "%{$searchQuery}%")
+                            ->orWhere('email', 'like', "%{$searchQuery}%")
+                            ->orWhere('id', 'like', "%{$searchQuery}%");
+                    });
+            });
+
+        $totalOverdue = $overdueQuery->get()->sum(function ($borrow) {
+            return (float) $borrow->calculateFine();
+        });
+
+        return response()->json([
+            'total_completed' => round($totalCompleted, 2),
+            'total_overdue'   => round($totalOverdue, 2),
+        ]);
+    }
+
+    public function getOverdueList(Request $request)
+    {
+        $perPage     = (int) $request->query('per_page', 10);
+        $currentPage = (int) $request->query('page', 1);
+        $searchQuery = $request->query('q');
+
+        // Base query: overdue + unpaid (same semantics as before)
+        $base = Borrow::with(['book', 'user'])
+            ->overdue()
+            ->where(function ($q) {
+                $q->whereNull('fine_paid')->orWhere('fine_paid', false);
+            })
+            ->when($searchQuery, function ($q) use ($searchQuery) {
+                $q->whereHas('book', function ($q2) use ($searchQuery) {
+                    $q2->where('name', 'like', "%{$searchQuery}%")
+                        ->orWhere('isbn', 'like', "%{$searchQuery}%")
+                        ->orWhere('id', 'like', "%{$searchQuery}%");
+                })
+                    ->orWhereHas('user', function ($q2) use ($searchQuery) {
+                        $q2->where('name', 'like', "%{$searchQuery}%")
+                            ->orWhere('email', 'like', "%{$searchQuery}%")
+                            ->orWhere('id', 'like', "%{$searchQuery}%");
+                    });
+            })
+            ->orderBy('due_date', 'asc');
+
+        // Pull all matching rows (needed to compute fine_amount in PHP)
+        $all = $base->get();
+
+        // Compute fine_amount like your getOverdueBooks, then filter out zero/negative
+        $filtered = $all->map(function ($borrow) {
+            $borrow->is_overdue  = true;
+            $borrow->fine_amount = (float) $borrow->calculateFine();
+            return $borrow;
+        })->filter(function ($borrow) {
+            // Keep only positive fines
+            return $borrow->fine_amount > 0;
+        })->values();
+
+        // Manual pagination over filtered results
+        $total      = $filtered->count();
+        $offset     = max(0, ($currentPage - 1) * $perPage);
+        $pageItems  = $filtered->slice($offset, $perPage)->values();
+
+        $paginator = new LengthAwarePaginator(
+            $pageItems,
+            $total,
+            $perPage,
+            $currentPage,
+            [
+                'path'     => url()->current(),
+                'pageName' => 'page',
+            ]
+        );
+
+        return response()->json($paginator);
     }
 }
