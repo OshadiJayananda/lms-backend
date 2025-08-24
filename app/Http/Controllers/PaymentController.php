@@ -192,12 +192,12 @@ class PaymentController extends Controller
         return response()->json($payments);
     }
 
-    // PaymentController.php
     public function getPaymentSummary(Request $request)
     {
         $searchQuery = $request->query('q');
 
-        $query = Payment::query()
+        // Payments summary (same as before)
+        $paymentQuery = Payment::query()
             ->when($searchQuery, function ($q) use ($searchQuery) {
                 $q->whereHas('borrow.book', function ($q2) use ($searchQuery) {
                     $q2->where('name', 'like', "%{$searchQuery}%")
@@ -209,17 +209,47 @@ class PaymentController extends Controller
                             ->orWhere('email', 'like', "%{$searchQuery}%")
                             ->orWhere('id', 'like', "%{$searchQuery}%");
                     })
-                    ->orWhere('stripe_payment_id', 'like', "%{$searchQuery}%");
-                // ->orWhere('amount', 'like', "%{$searchQuery}%")
-                // ->orWhere('description', 'like', "%{$searchQuery}%");
+                    ->orWhere('stripe_payment_id', 'like', "%{$searchQuery}%")
+                    ->orWhere('amount', 'like', "%{$searchQuery}%")
+                    ->orWhere('description', 'like', "%{$searchQuery}%");
             });
 
-        $totalAll = (clone $query)->sum('amount');
-        $totalCompleted = (clone $query)->where('status', 'completed')->sum('amount');
+        $totalAll = (clone $paymentQuery)->sum('amount');
+        $totalCompleted = (clone $paymentQuery)->where('status', 'completed')->sum('amount');
+
+        // ---- NEW: Total overdue fine (unpaid), using Borrow + calculateFine() ----
+        // We mirror your getOverdueBooks approach: use overdue() scope and per-borrow calculateFine()
+        $overdueQuery = Borrow::with(['book', 'user'])
+            ->overdue()
+            ->where(function ($q) {
+                // Only count fines that are not marked as paid
+                $q->whereNull('fine_paid')
+                    ->orWhere('fine_paid', false);
+            })
+            ->when($searchQuery, function ($q) use ($searchQuery) {
+                $q->whereHas('book', function ($q2) use ($searchQuery) {
+                    $q2->where('name', 'like', "%{$searchQuery}%")
+                        ->orWhere('isbn', 'like', "%{$searchQuery}%")
+                        ->orWhere('id', 'like', "%{$searchQuery}%");
+                })
+                    ->orWhereHas('user', function ($q2) use ($searchQuery) {
+                        $q2->where('name', 'like', "%{$searchQuery}%")
+                            ->orWhere('email', 'like', "%{$searchQuery}%")
+                            ->orWhere('id', 'like', "%{$searchQuery}%");
+                    });
+            });
+
+        // We must call calculateFine() per row (can’t sum in SQL easily).
+        // If your overdue set is large, consider computing a raw SQL fine or caching.
+        $totalOverdue = $overdueQuery->get()->sum(function ($borrow) {
+            // Ensure parity with your getOverdueBooks()
+            return (float) $borrow->calculateFine();
+        });
 
         return response()->json([
-            'total_all' => $totalAll,
+            'total_all'       => $totalAll,
             'total_completed' => $totalCompleted,
+            'total_overdue'   => round($totalOverdue, 2),
         ]);
     }
 }
