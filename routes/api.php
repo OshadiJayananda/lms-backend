@@ -75,6 +75,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin/book-reservations/pending/{bookId}', [BookReservationController::class, 'getPendingReservations']);
     Route::get('/admin/payments', [PaymentController::class, 'getPaymentList']);
     Route::get('/admin/payments/summary', [PaymentController::class, 'getPaymentSummary']);
+    Route::get('/admin/overdues', [PaymentController::class, 'getOverdueList']);
     Route::delete('/admin/borrowed-books/{id}', [BorrowController::class, 'destroy']);
     // Report Routes
     Route::prefix('admin/reports')->group(function () {
