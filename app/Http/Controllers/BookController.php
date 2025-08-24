@@ -113,39 +113,57 @@ class BookController extends Controller
 
     public function getDashboardStats()
     {
-        // Existing stats...
-        $totalBooks = Book::count();
-        $totalMembers = User::role('user')->count();
+        // Existing high-level counts
+        $totalBooks    = Book::count();
+        $totalMembers  = User::role('user')->count();
         $borrowedBooks = Borrow::where('status', 'Issued')->count();
-        $overdueBooks = Borrow::overdue()->count();
 
-        // Get overdue amounts with users
-        $overdueWithUsers = User::role('user')
-            ->with(['borrowedBooks' => function ($query) {
-                $query->overdue()->with('book');
-            }])
-            ->whereHas('borrowedBooks', function ($query) {
-                $query->overdue();
+        // 1) Build overdue borrows the "correct" way (like getOverdueBooks), admin-wide
+        //    - If you want to include *paid* items too, remove the whereNull/false block below.
+        $overdueBase = Borrow::with(['user:id,name,email', 'book:id,name,isbn'])
+            ->overdue()
+            ->where(function ($q) {
+                // Count only UNPAID overdue items in dashboard.
+                // Remove these two lines if you want all overdue regardless of payment.
+                $q->whereNull('fine_paid')
+                    ->orWhere('fine_paid', false);
             })
             ->get()
-            ->map(function ($user) {
-                $totalFine = $user->borrowedBooks->sum(function ($borrow) {
-                    return $borrow->calculateFine();
-                });
+            ->map(function ($borrow) {
+                $borrow->is_overdue  = true;
+                $borrow->fine_amount = (float) $borrow->calculateFine();
+                return $borrow;
+            })
+            // Filter out zero/negative fines so they don't appear in cards/tables
+            ->filter(function ($borrow) {
+                return $borrow->fine_amount > 0;
+            })
+            ->values();
+
+        // 2) Overdue books (count) should reflect only real (positive) fines
+        $overdueBooks = $overdueBase->count();
+
+        // 3) Per-user aggregation of overdue fines (top 5)
+        $overdueWithUsers = $overdueBase
+            ->groupBy('user_id')
+            ->map(function ($borrows, $userId) {
+                $user = $borrows->first()->user;
+
+                $totalFine = $borrows->sum('fine_amount');
 
                 return [
-                    'user_id' => $user->id,
-                    'user_name' => $user->name,
-                    'user_email' => $user->email,
-                    'total_fine' => $totalFine,
-                    'overdue_books_count' => $user->borrowedBooks->count()
+                    'user_id'             => $userId,
+                    'user_name'           => $user?->name,
+                    'user_email'          => $user?->email,
+                    'total_fine'          => round($totalFine, 2),
+                    'overdue_books_count' => $borrows->count(),
                 ];
             })
             ->sortByDesc('total_fine')
             ->values()
-            ->take(5); // Limit to top 5
+            ->take(5);
 
-        // Rest of your existing stats...
+        // --- Keep your other existing stats as-is ---
         $borrowedPerMonth = Borrow::selectRaw('MONTH(issued_date) as month, COUNT(*) as count')
             ->whereYear('issued_date', now()->year)
             ->groupBy('month')
@@ -165,21 +183,22 @@ class BookController extends Controller
             ->limit(5)
             ->get();
 
-        $recentRequests = Borrow::with(['user', 'book'])->where('status', 'Pending')
+        $recentRequests = Borrow::with(['user', 'book'])
+            ->where('status', 'Pending')
             ->latest()
             ->take(5)
             ->get();
 
         return response()->json([
-            'totalBooks' => $totalBooks,
-            'totalMembers' => $totalMembers,
-            'borrowedBooks' => $borrowedBooks,
-            'overdueBooks' => $overdueBooks,
+            'totalBooks'       => $totalBooks,
+            'totalMembers'     => $totalMembers,
+            'borrowedBooks'    => $borrowedBooks,
+            'overdueBooks'     => $overdueBooks,       // now only positive-fine, unpaid ones
             'borrowedPerMonth' => $borrowedPerMonth,
-            'topMembers' => $topMembers,
-            'topBooks' => $topBooks,
-            'recentRequests' => $recentRequests,
-            'overdueWithUsers' => $overdueWithUsers, // Add this new field
+            'topMembers'       => $topMembers,
+            'topBooks'         => $topBooks,
+            'recentRequests'   => $recentRequests,
+            'overdueWithUsers' => $overdueWithUsers,   // top 5 users by unpaid positive fines
         ]);
     }
 
