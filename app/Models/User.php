@@ -42,12 +42,12 @@ class User extends Authenticatable
 
     public function borrowedBooks()
     {
-        return $this->hasMany(\App\Models\Borrow::class);
+        return $this->hasMany(Borrow::class);
     }
 
     public function returnedBooks()
     {
-        return $this->hasMany(\App\Models\Borrow::class)->whereIn('status', ['Confirmed', 'Returned']);
+        return $this->hasMany(Borrow::class)->whereIn('status', ['Confirmed', 'Returned']);
     }
 
     public function overdueBooksCount()
