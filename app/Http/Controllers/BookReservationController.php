@@ -51,6 +51,16 @@ class BookReservationController extends Controller
                 'status' => 'pending'
             ]);
 
+            Notification::create([
+                'user_id' => 1, // Admin user_id (adjust if multiple admins)
+                'book_id' => $book->id,
+                'reservation_id' => $reservation->id,
+                'title' => 'New Book Reservation',
+                'message' => "User {$user->name} has reserved the book '{$book->name}'.",
+                'type' => 'admin_alert',
+                'is_read' => false
+            ]);
+
             return response()->json([
                 'message' => 'Reservation submitted successfully',
                 'reservation' => $reservation
