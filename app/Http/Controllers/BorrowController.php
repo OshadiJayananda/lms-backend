@@ -72,7 +72,7 @@ class BorrowController extends Controller
 
             // 🔔 Send notification to admin (assuming admin has ID = 1)
             Notification::create([
-                'user_id' => $borrow->user_id, // Admin ID
+                'user_id' => 1, // Admin ID
                 'book_id' => $book->id,
                 'title' => 'New Book Request',
                 'message' => "User {$user->name} has requested the book '{$book->name}'.",
