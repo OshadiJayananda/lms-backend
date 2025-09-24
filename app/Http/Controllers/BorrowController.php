@@ -64,10 +64,20 @@ class BorrowController extends Controller
             $book->no_of_copies -= 1;
             $book->save();
 
-            Borrow::create([
+            $borrow = Borrow::create([
                 'user_id' => $user->id,
                 'book_id' => $bookId,
                 'status' => 'Pending',
+            ]);
+
+            // 🔔 Send notification to admin (assuming admin has ID = 1)
+            Notification::create([
+                'user_id' => $borrow->user_id, // Admin ID
+                'book_id' => $book->id,
+                'title' => 'New Book Request',
+                'message' => "User {$user->name} has requested the book '{$book->name}'.",
+                'type' => 'admin_alert',
+                'is_read' => false
             ]);
 
             return response()->json(['message' => 'Book requested successfully!']);
